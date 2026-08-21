@@ -14,7 +14,6 @@ import { Button } from "../../components/ui/Button";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { StatusPill } from "../../components/ui/StatusPill";
 import { LoadModel } from "../../func/load-model.func";
-import { ChatDrawer } from "../../components/ui/ChatDrawer/ChatDrawer";
 import { useMachineDetail } from "./useMachineDetail";
 import { SensorCharts } from "./SensorCharts";
 import { MlDiagnostic } from "./MlDiagnostic";
@@ -242,7 +241,6 @@ export function MachineDetailScreen() {
 
       </ContentGrid>
 
-      <ChatDrawer machineId={String(id ?? "1")} />
     </PageWrapper>
   );
 }
