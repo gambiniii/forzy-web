@@ -1,15 +1,165 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { StatusPill } from "../../components/ui/StatusPill";
 import { Button } from "../../components/ui/Button";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { Spinner } from "../../components/ui/Spinner";
 import { usePlantas } from "../../hooks/usePlantas";
+import { usePlantStats } from "../../hooks/usePlantStats";
+import type { MotorSummary } from "../../hooks/usePlantStats";
 import { PlantaModal } from "../../components/plantas/PlantaModal";
+import type { Planta } from "../../services/plantas.service";
 import {
   PageWrapper, PlantsGrid, PlantCard, PlantCardHeader, GridOverlay,
-  PlantName, PlantBody, PlantLocation, StatsRow, Stat, StatValue, StatLabel, PillRow,
+  PlantName, HeaderBadge, PlantBody, PlantLocation,
+  PlantKpiRow, PlantKpi, PlantKpiValue, PlantKpiLabel,
+  PlantInfoStrip, PlantIsoBadge, PlantLastReading,
+  MotorsList, MotorRow, MotorDot, MotorName, MotorHealthBar, MotorHealthPct,
 } from "./Plants.styles";
+
+/* ── Helpers ────────────────────────────────────────────────────────── */
+
+const ISO_META: Record<string, { color: string; label: string }> = {
+  A:    { color: "var(--success)", label: "ISO Zona A" },
+  B:    { color: "#ffb833",        label: "ISO Zona B" },
+  C:    { color: "#ff7a1a",        label: "ISO Zona C" },
+  D:    { color: "var(--red)",     label: "ISO Zona D" },
+  low:  { color: "var(--success)", label: "Risco Baixo" },
+  medium: { color: "#ffb833",      label: "Risco Médio" },
+  high:   { color: "var(--red)",   label: "Risco Alto" },
+};
+
+function isoMeta(zone: string | null) {
+  if (!zone) return null;
+  return ISO_META[zone] ?? { color: "var(--text3)", label: zone };
+}
+
+function healthColor(pct: number): string {
+  if (pct >= 75) return "var(--success)";
+  if (pct >= 50) return "#ffb833";
+  return "var(--red)";
+}
+
+function timeAgo(ts: string): string {
+  try {
+    const diff = Date.now() - new Date(ts).getTime();
+    const min = Math.floor(diff / 60000);
+    if (min < 1) return "agora";
+    if (min < 60) return `${min}min atrás`;
+    const h = Math.floor(min / 60);
+    if (h < 24) return `${h}h atrás`;
+    return `${Math.floor(h / 24)}d atrás`;
+  } catch { return "—"; }
+}
+
+function machinesColor(motors: MotorSummary[]): string {
+  if (motors.some((m) => m.status === "inactive")) return "var(--red)";
+  if (motors.some((m) => m.status === "maintenance")) return "#ffb833";
+  return "var(--success)";
+}
+
+/* ── Enriched card ──────────────────────────────────────────────────── */
+
+function PlantCardContent({ planta, onClick }: { planta: Planta; onClick: () => void }) {
+  const { stats, loading } = usePlantStats(planta.id);
+
+  const location = [planta.cidade, planta.estado].filter(Boolean).join(", ")
+    || planta.localizacao || "—";
+
+  const iso = isoMeta(stats?.isoZone ?? null);
+  const activeMotors = stats?.motors.filter((m) => m.status === "active").length ?? 0;
+  const totalMotors  = stats?.motors.length ?? 0;
+  const alertCount   = stats?.totalAlerts ?? 0;
+  const avgHealth    = stats?.avgHealth ?? null;
+
+  return (
+    <PlantCard onClick={onClick}>
+      <PlantCardHeader>
+        <GridOverlay />
+        <PlantName>{planta.nome}</PlantName>
+        <HeaderBadge $active={planta.ativo}>
+          {planta.ativo ? "Ativa" : "Inativa"}
+        </HeaderBadge>
+      </PlantCardHeader>
+
+      <PlantBody>
+        {/* Location */}
+        <PlantLocation>
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+            <path d="M20 10c0 6-8 13-8 13s-8-7-8-13a8 8 0 0 1 16 0Z"/>
+            <circle cx="12" cy="10" r="3"/>
+          </svg>
+          {location}
+        </PlantLocation>
+
+        {/* KPI tiles */}
+        <PlantKpiRow>
+          <PlantKpi>
+            <PlantKpiValue $color={loading ? "var(--text3)" : machinesColor(stats?.motors ?? [])}>
+              {loading ? "—" : totalMotors === 0 ? "0" : `${activeMotors}/${totalMotors}`}
+            </PlantKpiValue>
+            <PlantKpiLabel>Máquinas</PlantKpiLabel>
+          </PlantKpi>
+
+          <PlantKpi $alert={alertCount > 0}>
+            <PlantKpiValue $color={
+              loading ? "var(--text3)" :
+              alertCount === 0 ? "var(--success)" :
+              alertCount <= 2 ? "#ffb833" : "var(--red)"
+            }>
+              {loading ? "—" : alertCount}
+            </PlantKpiValue>
+            <PlantKpiLabel>Alertas</PlantKpiLabel>
+          </PlantKpi>
+
+          <PlantKpi>
+            <PlantKpiValue $color={
+              loading || avgHealth === null ? "var(--text3)" : healthColor(avgHealth)
+            }>
+              {loading ? "—" : avgHealth !== null ? `${avgHealth.toFixed(0)}%` : "—"}
+            </PlantKpiValue>
+            <PlantKpiLabel>Saúde</PlantKpiLabel>
+          </PlantKpi>
+        </PlantKpiRow>
+
+        {/* ISO zone + last reading */}
+        {!loading && (iso || stats?.lastReadingAt) && (
+          <PlantInfoStrip>
+            {iso
+              ? <PlantIsoBadge $color={iso.color}>{iso.label}</PlantIsoBadge>
+              : <span />
+            }
+            {stats?.lastReadingAt
+              ? <PlantLastReading>Última leitura: {timeAgo(stats.lastReadingAt)}</PlantLastReading>
+              : null
+            }
+          </PlantInfoStrip>
+        )}
+
+        {/* Motors list */}
+        {!loading && (stats?.motors.length ?? 0) > 0 && (
+          <MotorsList>
+            {stats!.motors.map((m) => (
+              <MotorRow key={m.id}>
+                <MotorDot $status={m.status} />
+                <MotorName title={m.nome}>{m.nome}{m.tipo ? ` · ${m.tipo}` : ""}</MotorName>
+                {m.health !== null && (
+                  <>
+                    <MotorHealthBar $pct={m.health} $color={healthColor(m.health)} />
+                    <MotorHealthPct $color={healthColor(m.health)}>
+                      {m.health.toFixed(0)}%
+                    </MotorHealthPct>
+                  </>
+                )}
+              </MotorRow>
+            ))}
+          </MotorsList>
+        )}
+      </PlantBody>
+    </PlantCard>
+  );
+}
+
+/* ── Screen ─────────────────────────────────────────────────────────── */
 
 export function PlantsScreen() {
   const navigate = useNavigate();
@@ -20,73 +170,46 @@ export function PlantsScreen() {
     navigate(`/machinery?planta_id=${plantaId}`);
   }
 
+  if (loading) return (
+    <PageWrapper>
+      <PageHeader title="Gestão de Plantas" sub="Carregando..." right={null} />
+      <Spinner />
+    </PageWrapper>
+  );
 
   return (
     <PageWrapper>
       <PageHeader
         title="Gestão de Plantas"
-        sub={loading ? "Carregando..." : `${plantas.length} planta${plantas.length !== 1 ? "s" : ""} cadastrada${plantas.length !== 1 ? "s" : ""}`}
+        sub={`${plantas.length} planta${plantas.length !== 1 ? "s" : ""} cadastrada${plantas.length !== 1 ? "s" : ""}`}
         right={<Button variant="primary" onClick={() => setModalOpen(true)}>+ Nova Planta</Button>}
       />
 
-      {loading && <Spinner />}
-      {error && <p style={{ color: "var(--red)", padding: 16 }}>{error}</p>}
+      {error && <p style={{ color: "var(--red)", padding: "16px 0" }}>{error}</p>}
 
-      <PlantaModal
-        open={modalOpen}
-        onClose={() => setModalOpen(false)}
-        onSaved={reload}
-      />
+      <PlantaModal open={modalOpen} onClose={() => setModalOpen(false)} onSaved={reload} />
 
-      {!loading && !error && plantas.length === 0 && (
-        <div style={{ textAlign: "center", padding: "60px 0", color: "var(--text3)" }}>
-          <svg viewBox="0 0 48 48" fill="none" width="48" height="48" style={{ margin: "0 auto 12px", display: "block", opacity: 0.4 }}>
-            <path d="M8 40V18L24 8l16 10v22" stroke="currentColor" strokeWidth="2" />
-            <path d="M17 40V28h14v12" stroke="currentColor" strokeWidth="2" />
+      {plantas.length === 0 ? (
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 64, gap: 12, color: "var(--text3)" }}>
+          <svg viewBox="0 0 48 48" fill="none" width="48" height="48">
+            <rect x="6" y="18" width="36" height="26" rx="2" stroke="currentColor" strokeWidth="1.5" />
+            <path d="M16 18V12a8 8 0 0 1 16 0v6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+            <circle cx="24" cy="31" r="3" stroke="currentColor" strokeWidth="1.5" />
           </svg>
-          <p style={{ fontSize: 14, margin: 0 }}>Nenhuma planta cadastrada</p>
-          <p style={{ fontSize: 12, marginTop: 4 }}>Clique em "+ Nova Planta" para começar</p>
+          <span style={{ fontSize: 13 }}>Nenhuma planta cadastrada</span>
+          <Button variant="primary" onClick={() => setModalOpen(true)}>+ Nova Planta</Button>
         </div>
+      ) : (
+        <PlantsGrid>
+          {plantas.map((planta) => (
+            <PlantCardContent
+              key={planta.id}
+              planta={planta}
+              onClick={() => handlePlantaClick(planta.id)}
+            />
+          ))}
+        </PlantsGrid>
       )}
-
-      <PlantsGrid>
-        {plantas.map((planta) => {
-          const location = [planta.cidade, planta.estado].filter(Boolean).join(", ") || planta.localizacao || "—";
-
-          return (
-            <PlantCard key={planta.id} onClick={() => handlePlantaClick(planta.id)}>
-              <PlantCardHeader>
-                <GridOverlay />
-                <PlantName>{planta.nome}</PlantName>
-              </PlantCardHeader>
-
-              <PlantBody>
-                <PlantLocation>📍 {location}</PlantLocation>
-                <StatsRow>
-                  <Stat>
-                    <StatValue $color="var(--blue)">—</StatValue>
-                    <StatLabel>Máquinas</StatLabel>
-                  </Stat>
-                  <Stat>
-                    <StatValue $color="var(--text3)">—</StatValue>
-                    <StatLabel>Alertas</StatLabel>
-                  </Stat>
-                  <Stat>
-                    <StatValue $color="var(--text3)">—</StatValue>
-                    <StatLabel>OEE</StatLabel>
-                  </Stat>
-                </StatsRow>
-                <PillRow>
-                  {planta.ativo
-                    ? <StatusPill variant="green" animated>Ativa</StatusPill>
-                    : <StatusPill variant="red">Inativa</StatusPill>
-                  }
-                </PillRow>
-              </PlantBody>
-            </PlantCard>
-          );
-        })}
-      </PlantsGrid>
     </PageWrapper>
   );
 }
