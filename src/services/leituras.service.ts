@@ -37,8 +37,8 @@ export const leiturasService = {
    * Retorna histórico de leituras por componente_id.
    * params.inicio/fim são ignorados (backend usa `start` em formato InfluxDB: -1h, -24h, -7d).
    */
-  list: async (componenteId: number, params?: { inicio?: string; fim?: string; limit?: number }) => {
-    const start = params?.inicio ? _isoToInflux(params.inicio) : "-1h";
+  list: async (componenteId: number, params?: { inicio?: string; fim?: string; limit?: number; start?: string }) => {
+    const start = params?.start ?? (params?.inicio ? _isoToInflux(params.inicio) : "-1h");
     return api.get<LeituraSensor[]>(`/sensors/component/${componenteId}?start=${start}`);
   },
 

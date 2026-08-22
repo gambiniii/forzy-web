@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { leiturasService, type LeituraSensor } from "../services/leituras.service";
 
-export function useLeituras(componenteId: number, params?: { inicio?: string; fim?: string; limit?: number }) {
+export function useLeituras(componenteId: number, params?: { inicio?: string; fim?: string; limit?: number; start?: string }) {
   const [leituras, setLeituras] = useState<LeituraSensor[]>([]);
   const [loading, setLoading]   = useState(true);
   const [error, setError]       = useState<string | null>(null);
@@ -12,7 +12,7 @@ export function useLeituras(componenteId: number, params?: { inicio?: string; fi
       .then(data => setLeituras([...data].reverse())) // ascending por tempo
       .catch((e: Error) => setError(e.message))
       .finally(() => setLoading(false));
-  }, [componenteId, params?.inicio, params?.fim, params?.limit]);
+  }, [componenteId, params?.inicio, params?.fim, params?.limit, params?.start]);
 
   return { leituras, loading, error };
 }

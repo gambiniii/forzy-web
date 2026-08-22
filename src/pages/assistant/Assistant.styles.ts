@@ -302,6 +302,68 @@ export const SendButton = styled.button<{ $loading?: boolean }>`
   svg { ${({ $loading }) => $loading && css`animation: ${spin} 0.8s linear infinite;`} }
 `;
 
+/* ── Previous session banner ────────────────────────────────────────── */
+
+export const PreviousSessionBanner = styled.div`
+  max-width: 480px;
+  width: 100%;
+  background: var(--bg1);
+  border: 1px solid var(--border-md);
+  border-radius: var(--radius-lg);
+  padding: 11px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 20px;
+  animation: ${fadeIn} 0.25s ease;
+
+  .info { display: flex; flex-direction: column; gap: 2px; min-width: 0; overflow: hidden; }
+  .info strong { font-size: 12px; color: var(--text1); font-weight: 600; }
+  .info span   { font-size: 11px; color: var(--text3); }
+  .info em     { font-size: 11px; color: var(--text2); font-style: normal; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
+  .actions     { display: flex; gap: 6px; flex-shrink: 0; }
+`;
+
+export const SessionBtn = styled.button<{ $primary?: boolean }>`
+  padding: 5px 12px;
+  border-radius: var(--radius);
+  font-size: 11px;
+  font-weight: ${({ $primary }) => ($primary ? 600 : 400)};
+  cursor: pointer;
+  font-family: inherit;
+  transition: opacity 0.15s;
+  border: 1px solid ${({ $primary }) => ($primary ? "var(--purple)" : "var(--border-md)")};
+  background: ${({ $primary }) => ($primary ? "var(--purple)" : "transparent")};
+  color: ${({ $primary }) => ($primary ? "#fff" : "var(--text2)")};
+  white-space: nowrap;
+
+  &:hover { opacity: 0.8; }
+`;
+
+export const NewChatBar = styled.div`
+  display: flex;
+  justify-content: flex-end;
+  padding: 6px 20px 0;
+  flex-shrink: 0;
+`;
+
+export const NewChatBtn = styled.button`
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--text3);
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  padding: 3px 0;
+  transition: color 0.15s;
+
+  &:hover { color: var(--purple); }
+`;
+
 /* ── FAB (exported for AppShell) ────────────────────────────────────── */
 
 export const AssistantFab = styled.button`

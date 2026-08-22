@@ -18,12 +18,14 @@ import { useMachineDetail } from "./useMachineDetail";
 import { SensorCharts } from "./SensorCharts";
 import { MlDiagnostic } from "./MlDiagnostic";
 import { AnomaliaHistorico } from "./AnomaliaHistorico";
+import { EventTimeline } from "./EventTimeline";
 import {
   PageWrapper, HeaderActions, ContentGrid,
   ModelCard, ModelCardRight, ModelViewerWrapper, GridOverlay,
   ModelFallbackWrapper, ModelFallbackLabel, ModelHints, HintText, ModelTag,
-  SpecsCard, KpiGrid, ChartsArea,
+  SpecsCard, KpiGrid,
   AnomaliaStatusCard, AnomaliaHistoricoCard,
+  TabBar, TabBtn,
 } from "./MachineDetail.styles";
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Filler, Tooltip);
@@ -130,14 +132,18 @@ function ComponenteSpecs({ componentes, valoresPorComponente }: {
 
 const CARD_STYLE = { flex: 1, display: "flex", flexDirection: "column" as const, minHeight: 0 };
 
+type HistTab = "diagnosticos" | "eventos";
+
 export function MachineDetailScreen() {
   const { goTo } = useNavigation();
   const { id }   = useParams<{ id: string }>();
+  const [histTab, setHistTab] = useState<HistTab>("diagnosticos");
 
   const {
     maquina, componentes, valoresPorComponente,
     anomalias, loading, error,
     leituras, online, prediction,
+    componenteId, motorId,
   } = useMachineDetail(id);
 
   if (loading) return <Spinner />;
@@ -201,7 +207,7 @@ export function MachineDetailScreen() {
           </Card>
         </SpecsCard>
 
-        {/* Col 2 — Gráficos de sensor */}
+        {/* Col 2 — Gráficos de sensor com range selector */}
         <KpiGrid>
           <Card style={CARD_STYLE}>
             <CardHeader
@@ -212,30 +218,42 @@ export function MachineDetailScreen() {
                   : <StatusPill variant="red">OFFLINE</StatusPill>
               }
             />
-            <ChartsArea>
-              <SensorCharts leituras={leituras} />
-            </ChartsArea>
+            <SensorCharts leituras={leituras} componenteId={componenteId} />
           </Card>
         </KpiGrid>
 
-        {/* Col 3 — Diagnóstico ML */}
+        {/* Col 3 — Diagnóstico ML com gauge */}
         <AnomaliaStatusCard>
           <Card style={CARD_STYLE}>
             <CardHeader title="Diagnóstico ML" />
-            <CardBody>
-              {prediction
-                ? <MlDiagnostic prediction={prediction} />
-                : <p style={{ fontSize: 12, color: "var(--text3)", padding: "8px 0" }}>Aguardando inferência ML...</p>
-              }
-            </CardBody>
+            {prediction
+              ? <MlDiagnostic prediction={prediction} />
+              : (
+                <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <p style={{ fontSize: 12, color: "var(--text3)", padding: "8px 16px", textAlign: "center" }}>
+                    Aguardando inferência ML...
+                  </p>
+                </div>
+              )
+            }
           </Card>
         </AnomaliaStatusCard>
 
-        {/* Col 3 — Histórico de diagnósticos */}
+        {/* Col 3 — Histórico com tabs: Diagnósticos | Eventos */}
         <AnomaliaHistoricoCard>
           <Card style={CARD_STYLE}>
-            <CardHeader title="Histórico de Diagnósticos" />
-            <AnomaliaHistorico anomalias={anomalias} />
+            <TabBar>
+              <TabBtn $active={histTab === "diagnosticos"} onClick={() => setHistTab("diagnosticos")}>
+                Diagnósticos
+              </TabBtn>
+              <TabBtn $active={histTab === "eventos"} onClick={() => setHistTab("eventos")}>
+                Timeline de Eventos
+              </TabBtn>
+            </TabBar>
+            {histTab === "diagnosticos"
+              ? <AnomaliaHistorico anomalias={anomalias} />
+              : <EventTimeline motorId={motorId} anomalias={anomalias} />
+            }
           </Card>
         </AnomaliaHistoricoCard>
 

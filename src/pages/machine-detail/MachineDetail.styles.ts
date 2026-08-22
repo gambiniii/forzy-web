@@ -334,3 +334,210 @@ export const EmptyAnomalias = styled.div`
   color: var(--text3);
   font-size: 12px;
 `;
+
+/* ── ML Gauge ────────────────────────────────────────────────────────── */
+
+export const GaugeWrap = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 10px 16px 0;
+  flex-shrink: 0;
+`;
+
+export const IsoZoneBadge = styled.div<{ $color: string }>`
+  font-size: 11px;
+  font-weight: 600;
+  color: ${({ $color }) => $color};
+  background: ${({ $color }) => $color}22;
+  border: 1px solid ${({ $color }) => $color}44;
+  border-radius: 20px;
+  padding: 3px 14px;
+  margin-bottom: 10px;
+  letter-spacing: 0.04em;
+`;
+
+export const KpiRow = styled.div`
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 5px;
+  padding: 0 12px 10px;
+  width: 100%;
+`;
+
+export const KpiTile = styled.div`
+  background: var(--bg0);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 7px 6px 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+`;
+
+export const KpiValue = styled.span<{ $color?: string }>`
+  font-size: 13px;
+  font-weight: 700;
+  color: ${({ $color }) => $color ?? "var(--text1)"};
+  font-family: var(--mono);
+  line-height: 1;
+`;
+
+export const KpiLabel = styled.span`
+  font-size: 8.5px;
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  text-align: center;
+  line-height: 1.2;
+`;
+
+export const RecommendationBox = styled.div`
+  margin: 0 12px 12px;
+  padding: 8px 10px;
+  background: var(--bg0);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--purple);
+  border-radius: var(--radius);
+  font-size: 11px;
+  color: var(--text2);
+  line-height: 1.5;
+  flex-shrink: 0;
+`;
+
+/* ── Range selector ─────────────────────────────────────────────────── */
+
+export const RangeBar = styled.div`
+  display: flex;
+  gap: 4px;
+  padding: 8px 16px 4px;
+  flex-shrink: 0;
+`;
+
+export const RangeBtn = styled.button<{ $active: boolean }>`
+  padding: 3px 10px;
+  border-radius: 12px;
+  border: 1px solid ${({ $active }) => ($active ? "var(--purple)" : "var(--border-md)")};
+  background: ${({ $active }) => ($active ? "var(--purple-d)" : "transparent")};
+  color: ${({ $active }) => ($active ? "var(--purple)" : "var(--text3)")};
+  font-size: 10.5px;
+  font-weight: ${({ $active }) => ($active ? 600 : 400)};
+  cursor: pointer;
+  font-family: inherit;
+  transition: border-color 0.15s, background 0.15s, color 0.15s;
+
+  &:hover { border-color: var(--purple); color: var(--purple); }
+`;
+
+/* ── Tabs (Diagnósticos / Eventos) ─────────────────────────────────── */
+
+export const TabBar = styled.div`
+  display: flex;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+`;
+
+export const TabBtn = styled.button<{ $active: boolean }>`
+  padding: 7px 16px;
+  font-size: 11px;
+  font-weight: ${({ $active }) => ($active ? 600 : 400)};
+  color: ${({ $active }) => ($active ? "var(--text1)" : "var(--text3)")};
+  background: none;
+  border: none;
+  border-bottom: 2px solid ${({ $active }) => ($active ? "var(--purple)" : "transparent")};
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+  font-family: inherit;
+  margin-bottom: -1px;
+
+  &:hover { color: var(--text1); }
+`;
+
+/* ── Event Timeline ─────────────────────────────────────────────────── */
+
+export const TimelineList = styled.div`
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+  padding: 4px 0 8px;
+
+  &::-webkit-scrollbar { width: 3px; }
+  &::-webkit-scrollbar-track { background: transparent; }
+  &::-webkit-scrollbar-thumb { background: var(--border-md); border-radius: 2px; }
+`;
+
+export const TimelineGroupLabel = styled.div`
+  font-size: 9.5px;
+  font-weight: 600;
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 8px 16px 4px;
+`;
+
+export const TimelineItem = styled.div<{ $color: string }>`
+  display: flex;
+  gap: 8px;
+  padding: 5px 16px 5px 12px;
+  border-left: 2px solid ${({ $color }) => $color};
+  margin-left: 16px;
+  margin-bottom: 1px;
+  position: relative;
+
+  &::before {
+    content: "";
+    position: absolute;
+    left: -5px;
+    top: 9px;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: ${({ $color }) => $color};
+    flex-shrink: 0;
+  }
+`;
+
+export const TimelineContent = styled.div`
+  flex: 1;
+  min-width: 0;
+`;
+
+export const TimelineTag = styled.span<{ $color: string }>`
+  font-size: 9px;
+  font-weight: 600;
+  color: ${({ $color }) => $color};
+  background: ${({ $color }) => $color}22;
+  border-radius: 4px;
+  padding: 1px 6px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+`;
+
+export const TimelineTitle = styled.div`
+  font-size: 11.5px;
+  color: var(--text1);
+  margin: 2px 0 1px;
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+`;
+
+export const TimelineTime = styled.div`
+  font-size: 9.5px;
+  color: var(--text3);
+  font-family: var(--mono);
+`;
+
+export const TimelineEmpty = styled.div`
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: var(--text3);
+  font-size: 12px;
+  padding: 24px;
+`;

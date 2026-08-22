@@ -53,9 +53,12 @@ export function useMachineDetail(id: string | undefined) {
       .catch((e) => console.error("listAnomalias:", e));
   }, [prediction, componenteId]);
 
+  const motorId = maquina?.id ?? 0;
+
   return {
     maquina, componentes, valoresPorComponente,
     anomalias, loading, error,
     leituras, online, prediction,
+    componenteId, motorId,
   };
 }
