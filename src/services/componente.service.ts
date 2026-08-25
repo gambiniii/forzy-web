@@ -15,7 +15,6 @@ export interface AtributoValor {
   };
 }
 
-export async function getValoresByComponente(_componenteId: number): Promise<AtributoValor[]> {
-  // Endpoint /atributos/ não existe no novo schema — retorna vazio.
-  return [];
+export async function getValoresByComponente(componenteId: number): Promise<AtributoValor[]> {
+  return api.get<AtributoValor[]>(`/atributos/valores?componente_id=${componenteId}`);
 }

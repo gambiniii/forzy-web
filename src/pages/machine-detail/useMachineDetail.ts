@@ -8,7 +8,9 @@ import type { AtributoValor } from "../../services/componente.service";
 import { listAnomalias } from "../../services/anomalias.service";
 import type { Anomalia } from "../../services/anomalias.service";
 import { useLeituras } from "../../hooks/useLeituras";
-import { useWsLeituras } from "../../hooks/useWsLeituras";
+import { useLiveLeituras } from "../../hooks/useLiveLeituras";
+
+const ANOMALIAS_POLL_MS = 60_000;
 
 export function useMachineDetail(id: string | undefined) {
   const [maquina, setMaquina] = useState<Maquina | null>(null);
@@ -20,7 +22,8 @@ export function useMachineDetail(id: string | undefined) {
 
   const componenteId = componentes[0]?.id ?? 0;
   const { leituras: leiturasHist } = useLeituras(componenteId, { limit: 30 });
-  const { leituras, online, prediction } = useWsLeituras(componenteId, leiturasHist);
+  const { leituras, online } = useLiveLeituras(componenteId, leiturasHist);
+  const prediction = anomalias[0] ?? null;
 
   useEffect(() => {
     if (!id) return;
@@ -41,17 +44,17 @@ export function useMachineDetail(id: string | undefined) {
 
   useEffect(() => {
     if (!componenteId) return;
-    listAnomalias(componenteId, 50)
-      .then((data) => setAnomalias(Array.isArray(data) ? data : []))
-      .catch((e) => console.error("listAnomalias:", e));
-  }, [componenteId]);
 
-  useEffect(() => {
-    if (!prediction || !componenteId) return;
-    listAnomalias(componenteId, 50)
-      .then((data) => setAnomalias(Array.isArray(data) ? data : []))
-      .catch((e) => console.error("listAnomalias:", e));
-  }, [prediction, componenteId]);
+    const fetchAnomalias = () => {
+      listAnomalias(componenteId, 50)
+        .then((data) => setAnomalias(Array.isArray(data) ? data : []))
+        .catch((e) => console.error("listAnomalias:", e));
+    };
+
+    fetchAnomalias();
+    const intervalId = setInterval(fetchAnomalias, ANOMALIAS_POLL_MS);
+    return () => clearInterval(intervalId);
+  }, [componenteId]);
 
   const motorId = maquina?.id ?? 0;
 

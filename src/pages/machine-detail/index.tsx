@@ -11,20 +11,19 @@ import { Spinner } from "../../components/ui/Spinner";
 import { Card, CardHeader, CardBody } from "../../components/ui/Card";
 import { SpecRow } from "../../components/ui/SpecRow";
 import { Button } from "../../components/ui/Button";
-import { PageHeader } from "../../components/ui/PageHeader";
-import { StatusPill } from "../../components/ui/StatusPill";
 import { LoadModel } from "../../func/load-model.func";
 import { useMachineDetail } from "./useMachineDetail";
 import { SensorCharts } from "./SensorCharts";
 import { MlDiagnostic } from "./MlDiagnostic";
+import { HealthTrend } from "./HealthTrend";
+import { DiagnosticoSummary } from "./DiagnosticoSummary";
 import { AnomaliaHistorico } from "./AnomaliaHistorico";
 import { EventTimeline } from "./EventTimeline";
+import { MachineHero } from "./MachineHero";
 import {
-  PageWrapper, HeaderActions, ContentGrid,
-  ModelCard, ModelCardRight, ModelViewerWrapper, GridOverlay,
+  PageWrapper, DashboardGrid, SidebarCol, MainCol, HistoryCol, SidebarModelBox,
+  ModelViewerWrapper, GridOverlay,
   ModelFallbackWrapper, ModelFallbackLabel, ModelHints, HintText, ModelTag,
-  SpecsCard, KpiGrid,
-  AnomaliaStatusCard, AnomaliaHistoricoCard,
   TabBar, TabBtn,
 } from "./MachineDetail.styles";
 
@@ -130,7 +129,8 @@ function ComponenteSpecs({ componentes, valoresPorComponente }: {
 
 // ── Tela principal ────────────────────────────────────────────────────────────
 
-const CARD_STYLE = { flex: 1, display: "flex", flexDirection: "column" as const, minHeight: 0 };
+const CARD_FILL  = { flex: 1, display: "flex", flexDirection: "column" as const, minHeight: 0 };
+const CARD_AUTO  = { display: "flex", flexDirection: "column" as const, flexShrink: 0 };
 
 type HistTab = "diagnosticos" | "eventos";
 
@@ -150,23 +150,25 @@ export function MachineDetailScreen() {
   if (error)   return <p style={{ color: "var(--red)", padding: 24 }}>{error}</p>;
   if (!maquina) return null;
 
+  const lastLeituraTimestamp = leituras[leituras.length - 1]?.timestamp;
+
   return (
     <PageWrapper>
-      <PageHeader
+      <MachineHero
         title={maquina.nome}
         sub={maquina.fabricante ?? ""}
-        right={
-          <HeaderActions>
-            <Button onClick={() => goTo("equipment-form", maquina.id)}>Editar</Button>
-          </HeaderActions>
-        }
+        action={<Button onClick={() => goTo("equipment-form", maquina.id)}>Editar</Button>}
+        online={online}
+        lastLeituraTimestamp={lastLeituraTimestamp}
+        prediction={prediction}
+        anomalias={anomalias}
       />
 
-      <ContentGrid>
+      <DashboardGrid>
 
-        {/* Col 1 — Identificação */}
-        <ModelCard>
-          <Card style={CARD_STYLE}>
+        {/* Sidebar — identidade fixa do motor */}
+        <SidebarCol>
+          <Card style={CARD_AUTO}>
             <CardHeader title="Identificação" />
             <CardBody>
               <SpecRow label="ID"          value={String(maquina.id)} />
@@ -177,71 +179,62 @@ export function MachineDetailScreen() {
               <SpecRow label="Status"      value={STATUS_LABEL[maquina.status] ?? maquina.status} />
             </CardBody>
           </Card>
-        </ModelCard>
 
-        {/* Col 2 — Modelo 3D */}
-        <ModelCardRight>
-          <Card style={CARD_STYLE}>
+          <Card style={{ ...CARD_AUTO }}>
             <CardHeader title="Modelo 3D" />
-            <ModelViewerWrapper>
-              <GridOverlay />
-              <Suspense fallback={<ModelFallback />}>
-                <ModelViewer />
-              </Suspense>
-            </ModelViewerWrapper>
-            <ModelHints>
-              <HintText>↻ Arrastar para girar</HintText>
-              <HintText>⊕ Scroll para zoom</HintText>
-              <ModelTag>{maquina.tipo ?? "modelo"}</ModelTag>
-            </ModelHints>
+            <SidebarModelBox>
+              <ModelViewerWrapper>
+                <GridOverlay />
+                <Suspense fallback={<ModelFallback />}>
+                  <ModelViewer />
+                </Suspense>
+              </ModelViewerWrapper>
+              <ModelHints>
+                <HintText>↻ Girar</HintText>
+                <ModelTag>{maquina.tipo ?? "modelo"}</ModelTag>
+              </ModelHints>
+            </SidebarModelBox>
           </Card>
-        </ModelCardRight>
 
-        {/* Col 1 — Especificações técnicas */}
-        <SpecsCard>
-          <Card style={CARD_STYLE}>
+          <Card style={CARD_AUTO}>
             <CardHeader title="Especificações Técnicas" />
-            <div style={{ overflowY: "auto", flex: 1 }}>
+            <div style={{ maxHeight: 260, overflowY: "auto" }}>
               <ComponenteSpecs componentes={componentes} valoresPorComponente={valoresPorComponente} />
             </div>
           </Card>
-        </SpecsCard>
+        </SidebarCol>
 
-        {/* Col 2 — Gráficos de sensor com range selector */}
-        <KpiGrid>
-          <Card style={CARD_STYLE}>
-            <CardHeader
-              title="Medições"
-              right={
-                online
-                  ? <StatusPill variant="green" animated>ONLINE</StatusPill>
-                  : <StatusPill variant="red">OFFLINE</StatusPill>
-              }
-            />
+        {/* Coluna central — medições ao vivo */}
+        <MainCol>
+          <Card style={CARD_FILL}>
+            <CardHeader title="Medições" />
             <SensorCharts leituras={leituras} componenteId={componenteId} />
           </Card>
-        </KpiGrid>
+        </MainCol>
 
-        {/* Col 3 — Diagnóstico ML com gauge */}
-        <AnomaliaStatusCard>
-          <Card style={CARD_STYLE}>
+        {/* Coluna direita — diagnóstico, tendência e histórico */}
+        <HistoryCol>
+          <Card style={CARD_AUTO}>
             <CardHeader title="Diagnóstico ML" />
             {prediction
               ? <MlDiagnostic prediction={prediction} />
               : (
-                <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <p style={{ fontSize: 12, color: "var(--text3)", padding: "8px 16px", textAlign: "center" }}>
-                    Aguardando inferência ML...
-                  </p>
+                <div style={{ padding: "24px 16px", textAlign: "center" }}>
+                  <p style={{ fontSize: 12, color: "var(--text3)" }}>Aguardando inferência ML...</p>
                 </div>
               )
             }
           </Card>
-        </AnomaliaStatusCard>
 
-        {/* Col 3 — Histórico com tabs: Diagnósticos | Eventos */}
-        <AnomaliaHistoricoCard>
-          <Card style={CARD_STYLE}>
+          {anomalias.length > 0 && (
+            <Card style={CARD_AUTO}>
+              <CardHeader title="Tendência de Saúde" />
+              <HealthTrend anomalias={anomalias} />
+              <DiagnosticoSummary anomalias={anomalias} />
+            </Card>
+          )}
+
+          <Card style={CARD_FILL}>
             <TabBar>
               <TabBtn $active={histTab === "diagnosticos"} onClick={() => setHistTab("diagnosticos")}>
                 Diagnósticos
@@ -255,9 +248,9 @@ export function MachineDetailScreen() {
               : <EventTimeline motorId={motorId} anomalias={anomalias} />
             }
           </Card>
-        </AnomaliaHistoricoCard>
+        </HistoryCol>
 
-      </ContentGrid>
+      </DashboardGrid>
 
     </PageWrapper>
   );

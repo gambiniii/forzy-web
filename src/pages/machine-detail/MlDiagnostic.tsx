@@ -1,7 +1,8 @@
-import type { MlPrediction } from "../../hooks/useWsLeituras";
+import type { Anomalia } from "../../services/anomalias.service";
 import {
   GaugeWrap, IsoZoneBadge, KpiRow, KpiTile, KpiValue, KpiLabel, RecommendationBox,
 } from "./MachineDetail.styles";
+import { ISO_ZONES, getZone, gaugeColor, healthPct, formatRul } from "./diagnosticoUtils";
 
 /* ── Gauge semicircular ─────────────────────────────────────────────── */
 
@@ -47,65 +48,47 @@ function Gauge({ value, color }: { value: number; color: string }) {
   );
 }
 
-/* ── ISO zone ───────────────────────────────────────────────────────── */
-
-const ISO_ZONES = {
-  A: { color: "var(--success)", label: "ISO Zona A · Normal" },
-  B: { color: "#ffb833",       label: "ISO Zona B · Atenção" },
-  C: { color: "#ff7a1a",       label: "ISO Zona C · Limitado" },
-  D: { color: "var(--red)",    label: "ISO Zona D · Crítico" },
-} as const;
-
-function getZone(p: MlPrediction): "A" | "B" | "C" | "D" {
-  if (p.overall_status === "critical") return "D";
-  if (p.risk_level === "high" || p.lstm_severity === "high" || p.lstm_severity === "critical") return "C";
-  if (p.overall_status === "warning" || p.risk_level === "medium" || p.lstm_severity === "medium") return "B";
-  return "A";
-}
-
-function gaugeColor(pct: number): string {
-  if (pct >= 75) return "var(--success)";
-  if (pct >= 50) return "#ffb833";
-  return "var(--red)";
-}
-
-/* ── RUL formatting ─────────────────────────────────────────────────── */
-
-function formatRul(hours: number): string {
-  if (hours > 720) return `${Math.round(hours / 24)}d`;
-  return `${Math.round(hours)}h`;
-}
-
 /* ── Component ─────────────────────────────────────────────────────── */
 
 interface Props {
-  prediction: MlPrediction;
+  prediction: Anomalia;
 }
 
 export function MlDiagnostic({ prediction }: Props) {
-  const healthPct = prediction.health_score <= 1
-    ? prediction.health_score * 100
-    : prediction.health_score;
-  const color = gaugeColor(healthPct);
+  if (prediction.overall_status === "motor_desligado" || prediction.health_score === null) {
+    return (
+      <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <p style={{ fontSize: 12, color: "var(--text3)", padding: "8px 16px", textAlign: "center" }}>
+          Motor desligado — sem leitura de saúde no momento.
+        </p>
+      </div>
+    );
+  }
+
+  const pct = healthPct(prediction.health_score) ?? 0;
+  const color = gaugeColor(pct);
   const zone = getZone(prediction);
   const { color: zoneColor, label: zoneLabel } = ISO_ZONES[zone];
+  const rulColor = prediction.rul_hours === null
+    ? "var(--text3)"
+    : prediction.rul_hours < 200 ? "var(--red)" : prediction.rul_hours < 500 ? "#ffb833" : "var(--success)";
 
   return (
     <div style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0, overflow: "auto" }}>
       <GaugeWrap>
-        <Gauge value={healthPct} color={color} />
+        <Gauge value={pct} color={color} />
         <IsoZoneBadge $color={zoneColor}>{zoneLabel}</IsoZoneBadge>
       </GaugeWrap>
 
       <KpiRow>
         <KpiTile>
-          <KpiValue $color={prediction.rul_hours < 200 ? "var(--red)" : prediction.rul_hours < 500 ? "#ffb833" : "var(--success)"}>
+          <KpiValue $color={rulColor}>
             {formatRul(prediction.rul_hours)}
           </KpiValue>
           <KpiLabel>RUL Est.</KpiLabel>
         </KpiTile>
         <KpiTile>
-          <KpiValue>{prediction.maintenance_window_days}d</KpiValue>
+          <KpiValue>{prediction.maintenance_window_days !== null ? `${prediction.maintenance_window_days}d` : "—"}</KpiValue>
           <KpiLabel>Próx. Manutenção</KpiLabel>
         </KpiTile>
         <KpiTile>

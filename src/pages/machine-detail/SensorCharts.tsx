@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Line } from "react-chartjs-2";
 import { baseOptions, lineDataset, CO } from "../../components/charts/chartHelpers";
 import { useLeituras } from "../../hooks/useLeituras";
-import { ChartBox, RangeBar, RangeBtn } from "./MachineDetail.styles";
+import { ChartBox, RangeBar, RangeBtn, ChartStat } from "./MachineDetail.styles";
 import type { LeituraSensor } from "../../services/leituras.service";
 
 const CHARTS = [
@@ -20,6 +20,16 @@ const RANGES = [
   { label: "7d",      value: "-7d"  },
 ] as const;
 type Range = typeof RANGES[number]["value"];
+
+function statLine(values: (number | null)[]): string | null {
+  const nums = values.filter((v): v is number => v !== null);
+  if (nums.length === 0) return null;
+  const min = Math.min(...nums);
+  const max = Math.max(...nums);
+  const avg = nums.reduce((a, b) => a + b, 0) / nums.length;
+  const fmt = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(2));
+  return `mín ${fmt(min)} · méd ${fmt(avg)} · pico ${fmt(max)}`;
+}
 
 function toLabel(ts: string): string {
   const s = ts.replace(/(\.\d{3})\d+/, "$1").replace(/([+-]\d{2}:\d{2}|Z)?$/, (m) => m || "Z");
@@ -70,10 +80,12 @@ export function SensorCharts({ leituras: liveLeituras, componenteId }: Props) {
           {CHARTS.map(({ label, key, color }) => {
             const values = data.map((l) => l[key] ?? null);
             const hasData = values.some((v) => v !== null);
+            const stats = hasData ? statLine(values) : null;
             return (
               <div key={key} style={{ display: "flex", flexDirection: "column", minHeight: 0 }}>
                 <span style={{ fontSize: 11, color: "var(--text2)", marginBottom: 4, display: "block" }}>
                   {label}
+                  {stats && <ChartStat>{stats}</ChartStat>}
                 </span>
                 {hasData ? (
                   <ChartBox style={{ flex: 1 }}>

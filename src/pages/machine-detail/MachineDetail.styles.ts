@@ -10,94 +10,125 @@ export const PageWrapper = styled.div`
   animation: fadeIn 0.2s ease;
 `;
 
-export const HeaderActions = styled.div`
+/* ── Hero: identidade + narrativa do estado atual ─────────────────────── */
+
+export const HeroBar = styled.div`
   display: flex;
-  gap: 8px;
+  flex-direction: column;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 12px 18px;
+  flex-shrink: 0;
 `;
 
-export const ContentGrid = styled.div`
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  grid-template-rows: 1fr 1fr;
+export const HeroTopRow = styled.div`
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
   gap: 12px;
+  width: 100%;
+`;
+
+export const HeroTitle = styled.h1`
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text1);
+  line-height: 1.25;
+`;
+
+export const HeroSub = styled.p`
+  font-size: 12px;
+  color: var(--text2);
+  margin-top: 2px;
+`;
+
+export const HeroDivider = styled.div`
+  border-top: 1px solid var(--border);
+  margin: 10px 0;
+  width: 100%;
+`;
+
+export const HeroBody = styled.div`
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  width: 100%;
+`;
+
+export const HeroLeft = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
   flex: 1;
-  min-height: 0;
+  min-width: 260px;
 `;
 
-/* Identificação — linha 1, coluna 1 */
-export const ModelCard = styled.div`
-  grid-column: 1;
-  grid-row: 1;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-`;
-
-/* Modelo 3D — linha 1, coluna 2 */
-export const ModelCardRight = styled.div`
-  grid-column: 2;
-  grid-row: 1;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-`;
-
-/* Coluna 3, linha 1 — Status ML / Anomalia atual */
-export const AnomaliaStatusCard = styled.div`
-  grid-column: 3;
-  grid-row: 1;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-`;
-
-/* Coluna 3, linha 2 — Histórico de anomalias */
-export const AnomaliaHistoricoCard = styled.div`
-  grid-column: 3;
-  grid-row: 2;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-`;
-
-export const AccordionHeader = styled.div`
+export const HeroStatusLine = styled.div`
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 10px 16px;
-  cursor: pointer;
-  user-select: none;
-  border-bottom: 1px solid var(--border);
-  flex-shrink: 0;
-
-  &:hover {
-    background: var(--bg3);
-  }
-`;
-
-export const AccordionLabel = styled.span`
+  gap: 10px;
+  font-family: var(--mono);
   font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
   color: var(--text3);
 `;
 
-export const AccordionBody = styled.div<{ $open: boolean }>`
-  overflow: hidden;
-  max-height: ${({ $open }) => ($open ? "400px" : "0")};
-  transition: max-height 0.25s ease;
-  border-bottom: ${({ $open }) => ($open ? "1px solid var(--border)" : "none")};
+export const HeroNarrative = styled.p`
+  font-size: 13px;
+  color: var(--text1);
+  line-height: 1.5;
+  max-width: 62ch;
 `;
 
-export const ChartsArea = styled.div`
+export const HeroChips = styled.div`
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+`;
+
+/* ── Grid principal: sidebar | medições | diagnóstico e histórico ────── */
+
+export const DashboardGrid = styled.div`
+  display: grid;
+  grid-template-columns: 300px 1fr 340px;
+  gap: 12px;
   flex: 1;
+  min-height: 0;
+
+  @media (max-width: 1200px) {
+    grid-template-columns: 260px 1fr 300px;
+  }
+`;
+
+export const SidebarCol = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  padding: 12px 16px;
-  overflow-y: auto;
+  gap: 12px;
   min-height: 0;
+  overflow-y: auto;
+`;
+
+export const MainCol = styled.div`
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+`;
+
+export const HistoryCol = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;
+`;
+
+export const SidebarModelBox = styled.div`
+  height: 200px;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
 `;
 
 export const ChartBox = styled.div`
@@ -370,6 +401,7 @@ export const KpiTile = styled.div`
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 7px 6px 6px;
+  min-width: 72px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -404,6 +436,60 @@ export const RecommendationBox = styled.div`
   color: var(--text2);
   line-height: 1.5;
   flex-shrink: 0;
+`;
+
+/* ── Resumo do período (composição de status + última anomalia) ──────── */
+
+export const SummaryBar = styled.div`
+  display: flex;
+  height: 6px;
+  border-radius: 3px;
+  overflow: hidden;
+  background: var(--bg0);
+`;
+
+export const SummarySegment = styled.div<{ $color: string }>`
+  background: ${({ $color }) => $color};
+  flex-shrink: 0;
+`;
+
+export const SummaryLegend = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 6px;
+`;
+
+export const SummaryLegendItem = styled.span`
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10.5px;
+  color: var(--text2);
+`;
+
+export const SummaryDot = styled.span<{ $color: string }>`
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: ${({ $color }) => $color};
+  flex-shrink: 0;
+`;
+
+export const SummaryMeta = styled.div`
+  margin-top: 6px;
+  font-size: 10.5px;
+  color: var(--text3);
+  font-family: var(--mono);
+`;
+
+/* ── Estatísticas por gráfico (mín/média/pico) ───────────────────────── */
+
+export const ChartStat = styled.span`
+  font-size: 10px;
+  color: var(--text3);
+  font-family: var(--mono);
+  margin-left: 6px;
 `;
 
 /* ── Range selector ─────────────────────────────────────────────────── */
