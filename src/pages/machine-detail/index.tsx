@@ -94,7 +94,7 @@ function ModelFallback() {
   );
 }
 
-// ── Especificações de placa (motor.nameplate_*) ───────────────────────────────
+// ── Especificações de placa (componente.especificacao_motor) ─────────────────
 
 function NameplateSpecs({ componentes }: {
   componentes: ReturnType<typeof useMachineDetail>["componentes"];
