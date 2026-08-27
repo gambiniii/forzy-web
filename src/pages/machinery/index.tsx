@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import { useNavigation } from "../../context/NavigationContext";
 import { StatusPill } from "../../components/ui/StatusPill";
 import { Button } from "../../components/ui/Button";
@@ -52,6 +52,7 @@ const STATUS_LABEL: Record<string, string> = {
 
 export function MachineryScreen() {
   const { goTo } = useNavigation();
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const plantaIdParam = searchParams.get("planta_id");
   const plantaId = plantaIdParam ? Number(plantaIdParam) : null;
@@ -97,7 +98,7 @@ export function MachineryScreen() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
-            <Button variant="primary" onClick={() => goTo("equipment-form")}>
+            <Button variant="primary" onClick={() => navigate(`/machinery/equipment-form${plantaId ? `?planta_id=${plantaId}` : ""}`)}>
               + Cadastrar
             </Button>
           </HeaderActions>

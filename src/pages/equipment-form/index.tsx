@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
 import { useNavigation } from "../../context/NavigationContext";
 import { Card, CardHeader, CardBody } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
@@ -7,6 +7,8 @@ import { Input, Select } from "../../components/ui/Input/Input";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { Spinner } from "../../components/ui/Spinner";
 import { maquinasService } from "../../services/maquinas.service";
+import { plantasService } from "../../services/plantas.service";
+import type { Planta } from "../../services/plantas.service";
 import { PageWrapper, FormGrid, FieldGrid, FormActions } from "./EquipmentForm.styles";
 
 const STATUS_OPTIONS = [
@@ -26,27 +28,35 @@ const TIPO_OPTIONS = [
 export function EquipmentFormScreen() {
   const { goTo, goBack } = useNavigation();
   const { id } = useParams<{ id: string }>();
+  const [searchParams] = useSearchParams();
   const isEdit = Boolean(id);
 
-  const [loading, setLoading] = useState(isEdit);
-  const [saving, setSaving]   = useState(false);
-  const [error, setError]     = useState<string | null>(null);
+  const [loading, setLoading]   = useState(isEdit);
+  const [saving, setSaving]     = useState(false);
+  const [error, setError]       = useState<string | null>(null);
+  const [plantas, setPlantas]   = useState<Planta[]>([]);
 
-  const [nome, setNome]             = useState("");
-  const [tipo, setTipo]             = useState("");
-  const [fabricante, setFabricante] = useState("");
-  const [anoInst, setAnoInst]       = useState("");
-  const [status, setStatus]         = useState<"active" | "inactive" | "maintenance">("active");
+  const [nome, setNome]     = useState("");
+  const [tipo, setTipo]     = useState("");
+  const [status, setStatus] = useState<"active" | "inactive" | "maintenance">("active");
+  const [plantaId, setPlantaId] = useState<number | "">(
+    searchParams.get("planta_id") ? Number(searchParams.get("planta_id")) : ""
+  );
 
+  // Carregar lista de plantas para o seletor
+  useEffect(() => {
+    plantasService.list().then(setPlantas).catch(() => {});
+  }, []);
+
+  // Pré-popular campos no modo edição
   useEffect(() => {
     if (!isEdit || !id) return;
     maquinasService.get(Number(id))
       .then((m) => {
         setNome(m.nome);
         setTipo(m.tipo ?? "");
-        setFabricante(m.fabricante ?? "");
-        setAnoInst(m.ano_instalacao ? String(m.ano_instalacao) : "");
         setStatus(m.status);
+        setPlantaId(m.planta_id);
       })
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
@@ -54,15 +64,15 @@ export function EquipmentFormScreen() {
 
   const handleSave = async () => {
     if (!nome.trim()) { setError("Nome é obrigatório."); return; }
+    if (!plantaId)    { setError("Selecione uma planta."); return; }
     setSaving(true);
     setError(null);
     try {
       const payload = {
-        nome: nome.trim(),
-        tipo: tipo || undefined,
-        fabricante: fabricante || undefined,
-        ano_instalacao: anoInst ? Number(anoInst) : undefined,
+        nome:     nome.trim(),
+        tipo:     tipo || undefined,
         status,
+        planta_id: Number(plantaId),
       };
       const result = isEdit
         ? await maquinasService.update(Number(id), payload)
@@ -94,10 +104,11 @@ export function EquipmentFormScreen() {
           <CardBody style={{ display: "flex", flexDirection: "column", gap: 16, padding: 20 }}>
             <Input
               label="Nome / Descrição *"
-              placeholder="Ex: Sistema de Bombeamento 01"
+              placeholder="Ex: Motor WEG W22 — Linha 1"
               value={nome}
               onChange={(e) => setNome(e.target.value)}
             />
+
             <FieldGrid>
               <Select
                 label="Tipo"
@@ -107,27 +118,26 @@ export function EquipmentFormScreen() {
                 <option value="">Selecione...</option>
                 {TIPO_OPTIONS.map((t) => <option key={t} value={t}>{t}</option>)}
               </Select>
-              <Input
-                label="Fabricante"
-                placeholder="Ex: WEG"
-                value={fabricante}
-                onChange={(e) => setFabricante(e.target.value)}
-              />
+
+              <Select
+                label="Status"
+                value={status}
+                onChange={(e) => setStatus(e.target.value as typeof status)}
+              >
+                {STATUS_OPTIONS.map((s) => (
+                  <option key={s.value} value={s.value}>{s.label}</option>
+                ))}
+              </Select>
             </FieldGrid>
-            <Input
-              label="Ano de Instalação"
-              type="number"
-              placeholder="Ex: 2024"
-              value={anoInst}
-              onChange={(e) => setAnoInst(e.target.value)}
-            />
+
             <Select
-              label="Status"
-              value={status}
-              onChange={(e) => setStatus(e.target.value as typeof status)}
+              label="Planta *"
+              value={plantaId}
+              onChange={(e) => setPlantaId(e.target.value ? Number(e.target.value) : "")}
             >
-              {STATUS_OPTIONS.map((s) => (
-                <option key={s.value} value={s.value}>{s.label}</option>
+              <option value="">Selecione uma planta...</option>
+              {plantas.map((p) => (
+                <option key={p.id} value={p.id}>{p.nome}</option>
               ))}
             </Select>
           </CardBody>
