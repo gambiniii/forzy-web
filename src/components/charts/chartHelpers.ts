@@ -5,8 +5,8 @@ export const CO = {
   blue: "#38b6ff",
   purple: "#7421eb",  // secundária
   cyan: "#00d4d4",
-  grid: "rgba(128,128,128,0.15)",
-  text: "#6b6460",
+  grid: "rgba(160,148,136,0.18)",
+  text: "#a09488",   // equivale a ~--text2, legível nos eixos
 };
 
 export function baseOptions(yMin?: number, yMax?: number) {
@@ -17,26 +17,26 @@ export function baseOptions(yMin?: number, yMax?: number) {
     plugins: {
       legend: { display: false },
       tooltip: {
-        backgroundColor: "#171b26",
-        borderColor: "rgba(255,255,255,0.1)",
+        backgroundColor: "#1c1c1c",
+        borderColor: "rgba(255,255,255,0.14)",
         borderWidth: 1,
-        titleColor: CO.text,
-        bodyColor: "#e2e4ee",
-        padding: 8,
-        cornerRadius: 6,
+        titleColor: "#b8b0a6",
+        bodyColor: "#f0ede6",
+        padding: 10,
+        cornerRadius: 7,
       },
     },
     scales: {
       x: {
         grid: { color: CO.grid, drawBorder: false },
-        ticks: { color: CO.text, font: { size: 9 }, maxTicksLimit: 6, maxRotation: 0 },
+        ticks: { color: CO.text, font: { size: 10 }, maxTicksLimit: 6, maxRotation: 0 },
         border: { display: false },
       },
       y: {
         min: yMin,
         max: yMax,
         grid: { color: CO.grid, drawBorder: false },
-        ticks: { color: CO.text, font: { size: 9 } },
+        ticks: { color: CO.text, font: { size: 10 } },
         border: { display: false },
       },
     },

@@ -39,7 +39,7 @@ const fieldBase = css`
   }
 
   &:focus {
-    border-color: var(--border-hi);
+    border-color: var(--purple);
   }
 
   &:disabled {

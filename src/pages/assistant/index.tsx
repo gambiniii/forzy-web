@@ -2,8 +2,10 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import ReactMarkdown from "react-markdown";
 import { sendChatMessage, type ChatMessage } from "../../services/chat.service";
 import { api } from "../../services/api";
+import { BackButton } from "../../components/ui/BackButton";
 import {
-  PageWrapper, WelcomeContainer, AiOrb, WelcomeTitle, WelcomeSubtitle,
+  PageWrapper, BackBar,
+  WelcomeContainer, AiOrb, WelcomeTitle, WelcomeSubtitle,
   CapabilityGrid, CapabilityCard, WelcomeDivider,
   MessageList, MessageRow, Avatar, Bubble, ReportLink,
   ExamplesRow, ExampleChip,
@@ -290,11 +292,15 @@ export function AssistantScreen() {
   return (
     <PageWrapper>
 
+      <BackBar>
+        <BackButton />
+      </BackBar>
+
       {/* ── Welcome ────────────────────────────────────────────── */}
       {isEmpty && (
         <WelcomeContainer>
           <AiOrb><ThinkingOrb /></AiOrb>
-          <WelcomeTitle>Forzy AI</WelcomeTitle>
+          <WelcomeTitle>PRISMO</WelcomeTitle>
           <WelcomeSubtitle>Assistente de Monitoramento Industrial</WelcomeSubtitle>
 
           {/* Banner de sessão anterior */}

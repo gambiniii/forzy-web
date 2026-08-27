@@ -1,4 +1,6 @@
 import type { ReactNode } from "react";
+import { useNavigation } from "../../context/NavigationContext";
+import { BackButton } from "../../components/ui/BackButton";
 import { StatusPill } from "../../components/ui/StatusPill";
 import {
   HeroBar, HeroTopRow, HeroTitle, HeroSub, HeroDivider, HeroBody,
@@ -27,6 +29,7 @@ export function MachineHero({ title, sub, action, online, lastLeituraTimestamp, 
     <HeroBar>
       <HeroTopRow>
         <div>
+          <BackButton style={{ marginBottom: 4 }} />
           <HeroTitle>{title}</HeroTitle>
           {sub && <HeroSub>{sub}</HeroSub>}
         </div>

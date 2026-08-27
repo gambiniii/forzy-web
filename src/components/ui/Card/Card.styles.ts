@@ -20,7 +20,8 @@ export const CardTitle = styled.span`
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: var(--text2);
+  color: var(--text1);
+  opacity: 0.7;
 `;
 
 export const StyledCardBody = styled.div`
