@@ -9,6 +9,7 @@ import { PageHeader } from "../../components/ui/PageHeader";
 import { Spinner } from "../../components/ui/Spinner";
 import { useMaquinas } from "../../hooks/useMaquinas";
 import { usePlanta } from "../../hooks/usePlantas";
+import { useMaquinasMetrics, type MaquinaMetrics } from "../../hooks/useMaquinasMetrics";
 import {
   PageWrapper,
   HeaderActions,
@@ -38,6 +39,31 @@ const GearIcon = () => (
   </svg>
 );
 
+function fmtTemp(v: number | null | undefined) {
+  if (v == null) return "—";
+  return `${v.toFixed(1)}°C`;
+}
+function fmtVib(v: number | null | undefined) {
+  if (v == null) return "—";
+  return v.toFixed(3);
+}
+function fmtCorr(v: number | null | undefined) {
+  if (v == null) return "—";
+  return `${v.toFixed(2)}A`;
+}
+function tempColor(v: number | null | undefined) {
+  if (v == null) return "var(--text2)";
+  if (v >= 80)   return "var(--red)";
+  if (v >= 60)   return "var(--amber)";
+  return "var(--text1)";
+}
+function vibColor(v: number | null | undefined) {
+  if (v == null) return "var(--text2)";
+  if (v >= 10)   return "var(--red)";
+  if (v >= 4.5)  return "var(--amber)";
+  return "var(--text1)";
+}
+
 const STATUS_VARIANT: Record<string, "green" | "amber" | "red"> = {
   active: "green",
   maintenance: "amber",
@@ -62,6 +88,8 @@ export function MachineryScreen() {
 
   const { maquinas, loading } = useMaquinas();
   const { planta } = usePlanta(plantaId ?? 0);
+
+  const metrics = useMaquinasMetrics(maquinas.map((m) => m.id));
 
   const maquinasDaPlanta = plantaId
     ? maquinas.filter((m) => m.planta_id === plantaId)
@@ -145,18 +173,31 @@ export function MachineryScreen() {
               </MachineMeta>
             </MachineInfo>
             <MetricsGroup>
-              <MetricCell>
-                <MetricValue $color="var(--text2)">—</MetricValue>
-                <MetricLabel>Temp</MetricLabel>
-              </MetricCell>
-              <MetricCell>
-                <MetricValue $color="var(--text2)">—</MetricValue>
-                <MetricLabel>Vib</MetricLabel>
-              </MetricCell>
-              <MetricCell>
-                <MetricValue $color="var(--text2)">—</MetricValue>
-                <MetricLabel>Corr</MetricLabel>
-              </MetricCell>
+              {(() => {
+                const mx: MaquinaMetrics | undefined = metrics.get(m.id);
+                return (
+                  <>
+                    <MetricCell>
+                      <MetricValue $color={tempColor(mx?.temperatura)}>
+                        {fmtTemp(mx?.temperatura)}
+                      </MetricValue>
+                      <MetricLabel>Temp</MetricLabel>
+                    </MetricCell>
+                    <MetricCell>
+                      <MetricValue $color={vibColor(mx?.vibracao)}>
+                        {fmtVib(mx?.vibracao)}
+                      </MetricValue>
+                      <MetricLabel>Vib</MetricLabel>
+                    </MetricCell>
+                    <MetricCell>
+                      <MetricValue $color={mx?.corrente != null ? "var(--text1)" : "var(--text2)"}>
+                        {fmtCorr(mx?.corrente)}
+                      </MetricValue>
+                      <MetricLabel>Corr</MetricLabel>
+                    </MetricCell>
+                  </>
+                );
+              })()}
             </MetricsGroup>
             <StatusPill
               variant={STATUS_VARIANT[m.status] ?? "green"}
