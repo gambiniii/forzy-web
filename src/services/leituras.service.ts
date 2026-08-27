@@ -39,7 +39,8 @@ export const leiturasService = {
    */
   list: async (componenteId: number, params?: { inicio?: string; fim?: string; limit?: number; start?: string }) => {
     const start = params?.start ?? (params?.inicio ? _isoToInflux(params.inicio) : "-1h");
-    return api.get<LeituraSensor[]>(`/sensors/component/${componenteId}?start=${start}`);
+    const limitQ = params?.limit ? `&limit=${params.limit}` : "";
+    return api.get<LeituraSensor[]>(`/sensors/component/${componenteId}?start=${start}${limitQ}`);
   },
 
   ultima: (componenteId: number) =>
