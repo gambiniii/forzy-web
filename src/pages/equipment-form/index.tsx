@@ -63,6 +63,7 @@ export function EquipmentFormScreen() {
         fabricante: fabricante || undefined,
         ano_instalacao: anoInst ? Number(anoInst) : undefined,
         status,
+        planta_id: 1, // única planta cadastrada hoje (Forzy - Promon)
       };
       const result = isEdit
         ? await maquinasService.update(Number(id), payload)
