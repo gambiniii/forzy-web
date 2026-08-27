@@ -30,6 +30,7 @@ export const HeroTopRow = styled.div`
   width: 100%;
 `;
 
+
 export const HeroTitle = styled.h1`
   font-size: 18px;
   font-weight: 600;
@@ -139,12 +140,8 @@ export const ChartBox = styled.div`
 export const ModelViewerWrapper = styled.div`
   flex: 1;
   position: relative;
-  background: radial-gradient(ellipse at center, #1a1f30 0%, #0a0c10 100%);
+  background: radial-gradient(ellipse at center, var(--bg1) 0%, var(--bg0) 100%);
   min-height: 0;
-
-  [data-theme="light"] & {
-    background: radial-gradient(ellipse at center, #dde3ee 0%, #eaedf1 100%);
-  }
 `;
 
 export const GridOverlay = styled.div`
@@ -224,19 +221,11 @@ export const AlertBanner = styled.div<{ $status: "warning" | "critical" }>`
   gap: 10px;
 
   ${({ $status }) => $status === "critical" ? css`
-    border: 1px solid #ff4f6a;
-    background: #3a1520;
-    [data-theme="light"] & {
-      background: #fff0f2;
-      border-color: #e0284a;
-    }
+    border: 1px solid var(--red);
+    background: var(--red-d);
   ` : css`
-    border: 1px solid #ffb833;
-    background: #2e2000;
-    [data-theme="light"] & {
-      background: #fff8e6;
-      border-color: #c87800;
-    }
+    border: 1px solid var(--amber);
+    background: var(--amber-d);
   `}
 `;
 
@@ -245,13 +234,7 @@ export const AlertIcon = styled.span<{ $status: "warning" | "critical" }>`
   line-height: 1;
   flex-shrink: 0;
   margin-top: 1px;
-  ${({ $status }) => $status === "critical" ? css`
-    color: #ff4f6a;
-    [data-theme="light"] & { color: #e0284a; }
-  ` : css`
-    color: #ffb833;
-    [data-theme="light"] & { color: #c87800; }
-  `}
+  color: ${({ $status }) => $status === "critical" ? "var(--red)" : "var(--amber)"};
 `;
 
 export const AlertBody = styled.div`
@@ -263,21 +246,13 @@ export const AlertTitle = styled.div<{ $status: "warning" | "critical" }>`
   font-size: 12px;
   font-weight: 600;
   margin-bottom: 2px;
-  ${({ $status }) => $status === "critical" ? css`
-    color: #ff4f6a;
-    [data-theme="light"] & { color: #e0284a; }
-  ` : css`
-    color: #ffb833;
-    [data-theme="light"] & { color: #c87800; }
-  `}
+  color: ${({ $status }) => $status === "critical" ? "var(--red)" : "var(--amber)"};
 `;
 
 export const AlertText = styled.div`
   font-size: 11px;
   color: var(--text1);
   line-height: 1.4;
-
-  [data-theme="light"] & { color: #2a2218; }
 `;
 
 export const AlertMeta = styled.div`
@@ -285,8 +260,6 @@ export const AlertMeta = styled.div`
   color: var(--text2);
   margin-top: 4px;
   font-family: var(--mono);
-
-  [data-theme="light"] & { color: #5a4a30; }
 `;
 
 /* Gráficos / dashboard — linha 2, coluna 2 */
@@ -479,7 +452,7 @@ export const SummaryDot = styled.span<{ $color: string }>`
 export const SummaryMeta = styled.div`
   margin-top: 6px;
   font-size: 10.5px;
-  color: var(--text3);
+  color: var(--text2);
   font-family: var(--mono);
 `;
 
@@ -487,7 +460,7 @@ export const SummaryMeta = styled.div`
 
 export const ChartStat = styled.span`
   font-size: 10px;
-  color: var(--text3);
+  color: var(--text2);
   font-family: var(--mono);
   margin-left: 6px;
 `;
@@ -506,7 +479,7 @@ export const RangeBtn = styled.button<{ $active: boolean }>`
   border-radius: 12px;
   border: 1px solid ${({ $active }) => ($active ? "var(--purple)" : "var(--border-md)")};
   background: ${({ $active }) => ($active ? "var(--purple-d)" : "transparent")};
-  color: ${({ $active }) => ($active ? "var(--purple)" : "var(--text3)")};
+  color: ${({ $active }) => ($active ? "var(--purple)" : "var(--text2)")};
   font-size: 10.5px;
   font-weight: ${({ $active }) => ($active ? 600 : 400)};
   cursor: pointer;

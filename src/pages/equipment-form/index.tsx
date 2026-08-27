@@ -92,6 +92,7 @@ export function EquipmentFormScreen() {
       <PageHeader
         title={isEdit ? "Editar Equipamento" : "Cadastrar Equipamento"}
         sub="Preencha os dados do equipamento"
+        back
       />
 
       {error && (

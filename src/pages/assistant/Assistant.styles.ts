@@ -11,6 +11,11 @@ export const PageWrapper = styled.div`
   overflow: hidden;
 `;
 
+export const BackBar = styled.div`
+  padding: 10px 20px 0;
+  flex-shrink: 0;
+`;
+
 /* ── Welcome ────────────────────────────────────────────────────────── */
 
 export const WelcomeContainer = styled.div`

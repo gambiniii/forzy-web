@@ -7,20 +7,20 @@ body { height: 100%; font-family: 'IBM Plex Sans', sans-serif; font-size: 14px; 
 :root {
   /* Backgrounds derivados do preto #252525 */
   --bg0: #252525;
-  --bg1: #2e2e2e;
-  --bg2: #383838;
-  --bg3: #424242;
-  --bg4: #4d4d4d;
+  --bg1: #2d2d2d;
+  --bg2: #363636;
+  --bg3: #414141;
+  --bg4: #4c4c4c;
 
   /* Bordas */
-  --border: rgba(255,255,255,0.07);
-  --border-md: rgba(255,255,255,0.13);
-  --border-hi: rgba(255,255,255,0.22);
+  --border: rgba(255,255,255,0.10);
+  --border-md: rgba(255,255,255,0.17);
+  --border-hi: rgba(255,255,255,0.28);
 
   /* Texto */
-  --text1: #f0ede6;
-  --text2: #a09890;
-  --text3: #6b6460;
+  --text1: #f7f4ef;
+  --text2: #b8b0a6;
+  --text3: #807870;
 
   --mono: 'IBM Plex Mono', monospace;
 

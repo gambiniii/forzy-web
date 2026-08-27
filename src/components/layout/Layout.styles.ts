@@ -214,12 +214,18 @@ export const NavItemRow = styled.div<{ $active: boolean }>`
   gap: 10px;
   padding: 10px 18px;
   font-size: 13px;
-  color: ${({ $active }) => ($active ? "var(--green)" : "var(--text2)")};
+  color: ${({ $active }) => ($active ? "var(--green)" : "var(--text1)")};
+  opacity: ${({ $active }) => ($active ? 1 : 0.6)};
   cursor: pointer;
   border-left: 2px solid ${({ $active }) => ($active ? "var(--green)" : "transparent")};
   background: ${({ $active }) => ($active ? "var(--green-d)" : "transparent")};
   transition: all 0.15s;
   user-select: none;
+
+  &:hover {
+    opacity: 1;
+    color: ${({ $active }) => ($active ? "var(--green)" : "var(--text1)")};
+  }
 `;
 
 export const NavIconWrap = styled.span<{ $active: boolean }>`

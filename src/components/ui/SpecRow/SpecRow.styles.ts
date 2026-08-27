@@ -4,7 +4,7 @@ export const RowRoot = styled.div`
   display: flex;
   align-items: center;
   padding: 7px 16px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  border-bottom: 1px solid var(--border);
   font-size: 12px;
 `;
 
