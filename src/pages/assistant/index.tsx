@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import ReactMarkdown from "react-markdown";
 import { sendChatMessage, type ChatMessage } from "../../services/chat.service";
-import { api } from "../../services/api";
+import { BASE_URL } from "../../services/api";
 import { BackButton } from "../../components/ui/BackButton";
 import {
   PageWrapper, BackBar,
@@ -267,9 +267,7 @@ export function AssistantScreen() {
       });
 
       const answer = res.answer || "Sem resposta disponível.";
-      const reportUrl = res.report_url
-        ? `${(api as any).baseUrl ?? "http://localhost:8000"}${res.report_url}`
-        : null;
+      const reportUrl = res.report_url ? `${BASE_URL}${res.report_url}` : null;
 
       setMessages((prev) => [...prev, { role: "ai", text: answer, reportUrl }]);
       setHistory([...newHistory, { role: "assistant", content: answer }]);
