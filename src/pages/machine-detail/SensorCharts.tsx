@@ -9,7 +9,6 @@ const CHARTS = [
   { label: "Vibração (mm/s)",  key: "vibracao"    as const, color: CO.amber  },
   { label: "RPM",              key: "rpm"          as const, color: CO.blue   },
   { label: "Temperatura (°C)", key: "temperatura"  as const, color: CO.purple },
-  { label: "Corrente (A)",     key: "corrente"     as const, color: CO.green  },
 ] as const;
 
 const RANGES = [
@@ -76,7 +75,7 @@ export function SensorCharts({ leituras: liveLeituras, componenteId }: Props) {
           <p style={{ color: "var(--text3)", fontSize: 13 }}>Sem leituras no período.</p>
         </div>
       ) : (
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gridTemplateRows: "1fr 1fr", gap: 12, flex: 1, padding: "4px 16px 12px", minHeight: 0 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr", gridTemplateRows: "repeat(3, 1fr)", gap: 10, flex: 1, padding: "4px 16px 12px", minHeight: 0 }}>
           {CHARTS.map(({ label, key, color }) => {
             const values = data.map((l) => l[key] ?? null);
             const hasData = values.some((v) => v !== null);

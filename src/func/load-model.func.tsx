@@ -1,6 +1,7 @@
-import { useEffect, useRef, useMemo } from "react";
+import { useEffect, useRef, useMemo, useState } from "react";
 import { useLoader, useThree } from "@react-three/fiber";
 import { OBJLoader } from "three/examples/jsm/Addons.js";
+import { Html } from "@react-three/drei";
 import * as THREE from "three";
 import { useTheme } from "../context/ThemeContext";
 
@@ -12,16 +13,33 @@ const MATERIAL_HOVER = new THREE.MeshStandardMaterial({
   emissiveIntensity: 0.3,
 });
 
+/** Cor + mensagem de causa-raiz para um segmento do modelo — ver
+ * `buildHighlightMap` em `pages/machine-detail/diagnosticoUtils.ts`. */
+export interface HighlightInfo {
+  color: string;
+  emissive: string;
+  message: string;
+}
+
+interface DiagnosisMarker {
+  name: string;
+  position: THREE.Vector3;
+  info: HighlightInfo;
+}
+
 interface LoadModelProps {
   onHover?: (name: string | null, x: number, y: number) => void;
+  /** nome do segmento OBJ → destaque de causa-raiz (persiste mesmo sem hover). */
+  highlightMap?: Record<string, HighlightInfo>;
   [key: string]: unknown;
 }
 
-export function LoadModel({ onHover, ...props }: LoadModelProps) {
+export function LoadModel({ onHover, highlightMap, ...props }: LoadModelProps) {
   const obj = useLoader(OBJLoader, "/3d/Engine1.obj");
   const ref = useRef<THREE.Object3D>(null);
   const { camera } = useThree();
   const { theme } = useTheme();
+  const [markers, setMarkers] = useState<DiagnosisMarker[]>([]);
 
   const materialDefault = useMemo(() => new THREE.MeshStandardMaterial(
     theme === "light"
@@ -29,15 +47,42 @@ export function LoadModel({ onHover, ...props }: LoadModelProps) {
       : { color: "#8a9bb0", metalness: 0.6, roughness: 0.4 }
   ), [theme]);
 
+  const diagnosisMaterials = useMemo(() => {
+    const cache = new Map<string, THREE.MeshStandardMaterial>();
+    Object.entries(highlightMap ?? {}).forEach(([name, info]) => {
+      cache.set(name, new THREE.MeshStandardMaterial({
+        color: info.color,
+        metalness: 0.4,
+        roughness: 0.3,
+        emissive: info.emissive,
+        emissiveIntensity: 0.6,
+      }));
+    });
+    return cache;
+  }, [highlightMap]);
+
+  const applyMaterials = () => {
+    if (!ref.current) return;
+    ref.current.updateMatrixWorld(true);
+    const found: DiagnosisMarker[] = [];
+    ref.current.traverse((child) => {
+      if (!(child as THREE.Mesh).isMesh) return;
+      const mesh = child as THREE.Mesh;
+      const diag = diagnosisMaterials.get(mesh.name);
+      mesh.material = diag ?? materialDefault;
+      const info = highlightMap?.[mesh.name];
+      if (diag && info) {
+        const position = new THREE.Vector3();
+        mesh.getWorldPosition(position);
+        found.push({ name: mesh.name, position, info });
+      }
+    });
+    setMarkers(found);
+  };
+
   // câmera e posição — roda só quando o modelo carrega
   useEffect(() => {
     if (!ref.current) return;
-
-    ref.current.traverse((child) => {
-      if ((child as THREE.Mesh).isMesh) {
-        (child as THREE.Mesh).material = materialDefault;
-      }
-    });
 
     const box = new THREE.Box3().setFromObject(ref.current);
     const center = box.getCenter(new THREE.Vector3());
@@ -52,17 +97,15 @@ export function LoadModel({ onHover, ...props }: LoadModelProps) {
     camera.near = distance / 100;
     camera.far = distance * 10;
     camera.updateProjectionMatrix();
+
+    applyMaterials();
   }, [obj, camera]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // material — roda só quando o tema muda, sem mexer na câmera
+  // material/destaque de diagnóstico — roda quando tema ou highlightMap mudam,
+  // sem recentralizar a câmera
   useEffect(() => {
-    if (!ref.current) return;
-    ref.current.traverse((child) => {
-      if ((child as THREE.Mesh).isMesh) {
-        (child as THREE.Mesh).material = materialDefault;
-      }
-    });
-  }, [materialDefault]);
+    applyMaterials();
+  }, [materialDefault, diagnosisMaterials]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handlePointerOver = (e: { stopPropagation: () => void; object: THREE.Object3D; nativeEvent: PointerEvent }) => {
     e.stopPropagation();
@@ -75,7 +118,7 @@ export function LoadModel({ onHover, ...props }: LoadModelProps) {
 
   const handlePointerOut = (e: { object: THREE.Object3D }) => {
     const mesh = e.object as THREE.Mesh;
-    mesh.material = materialDefault;
+    mesh.material = diagnosisMaterials.get(mesh.name) ?? materialDefault;
     document.body.style.cursor = "default";
     onHover?.(null, 0, 0);
   };
@@ -87,13 +130,37 @@ export function LoadModel({ onHover, ...props }: LoadModelProps) {
   };
 
   return (
-    <primitive
-      ref={ref}
-      object={obj}
-      onPointerOver={handlePointerOver}
-      onPointerOut={handlePointerOut}
-      onPointerMove={handlePointerMove}
-      {...props}
-    />
+    <>
+      <primitive
+        ref={ref}
+        object={obj}
+        onPointerOver={handlePointerOver}
+        onPointerOut={handlePointerOut}
+        onPointerMove={handlePointerMove}
+        {...props}
+      />
+      {markers.map((m) => (
+        <Html key={m.name} position={m.position} center distanceFactor={8} zIndexRange={[10, 0]}>
+          <div
+            style={{
+              background: "rgba(15,23,42,0.94)",
+              border: `1px solid ${m.info.color}`,
+              color: m.info.color,
+              fontSize: 10,
+              fontFamily: "var(--mono, monospace)",
+              padding: "4px 8px",
+              borderRadius: 4,
+              pointerEvents: "none",
+              transform: "translateY(-140%)",
+              maxWidth: 200,
+              lineHeight: 1.4,
+              whiteSpace: "normal",
+            }}
+          >
+            {m.info.message}
+          </div>
+        </Html>
+      ))}
+    </>
   );
 }

@@ -1,4 +1,4 @@
-import { Suspense, useState } from "react";
+import { Suspense, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import { Canvas } from "@react-three/fiber";
 import { OrbitControls, Environment } from "@react-three/drei";
@@ -8,38 +8,31 @@ import {
 } from "chart.js";
 import { useNavigation } from "../../context/NavigationContext";
 import { Spinner } from "../../components/ui/Spinner";
-import { Card, CardHeader, CardBody } from "../../components/ui/Card";
-import { SpecRow } from "../../components/ui/SpecRow";
+import { Card, CardHeader } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
-import { LoadModel } from "../../func/load-model.func";
+import { LoadModel, type HighlightInfo } from "../../func/load-model.func";
 import { useMachineDetail } from "./useMachineDetail";
 import { SensorCharts } from "./SensorCharts";
-import { MlDiagnostic } from "./MlDiagnostic";
-import { HealthTrend } from "./HealthTrend";
-import { DiagnosticoSummary } from "./DiagnosticoSummary";
-import { AnomaliaHistorico } from "./AnomaliaHistorico";
-import { EventTimeline } from "./EventTimeline";
 import { MachineHero } from "./MachineHero";
+import { IdentificacaoModal } from "./IdentificacaoModal";
+import { EspecificacoesModal } from "./EspecificacoesModal";
+import { buildHighlightMap } from "./diagnosticoUtils";
+import { MOTOR_SEGMENT_MAP } from "../../config/motorSegmentMap";
 import {
-  PageWrapper, DashboardGrid, SidebarCol, MainCol, HistoryCol, SidebarModelBox,
+  PageWrapper, StageGrid, ModelStageBox, MeasurementsBox,
   ModelViewerWrapper, GridOverlay,
   ModelFallbackWrapper, ModelFallbackLabel, ModelHints, HintText, ModelTag,
-  TabBar, TabBtn,
 } from "./MachineDetail.styles";
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Filler, Tooltip);
 
-const STATUS_LABEL: Record<string, string> = {
-  active: "Online",
-  maintenance: "Manutenção",
-  inactive: "Inativo",
-};
+const CARD_FILL = { flex: 1, display: "flex", flexDirection: "column" as const, minHeight: 0 };
 
 // ── Modelo 3D ────────────────────────────────────────────────────────────────
 
 type Tooltip3D = { name: string; x: number; y: number } | null;
 
-function ModelViewer() {
+function ModelViewer({ highlightMap }: { highlightMap: Record<string, HighlightInfo> }) {
   const [tooltip, setTooltip] = useState<Tooltip3D>(null);
 
   const handleHover = (name: string | null, x: number, y: number) => {
@@ -58,7 +51,7 @@ function ModelViewer() {
         <directionalLight position={[-3, 2, -2]} intensity={0.4} color="#38b6ff" />
         <pointLight position={[0, -2, 0]} intensity={0.3} color="#ffa300" />
         <Suspense fallback={null}>
-          <LoadModel position={[0, 0, 0]} onHover={handleHover} />
+          <LoadModel position={[0, 0, 0]} onHover={handleHover} highlightMap={highlightMap} />
           <Environment preset="city" />
         </Suspense>
         <OrbitControls enablePan={false} enableZoom autoRotateSpeed={1.2} />
@@ -94,82 +87,13 @@ function ModelFallback() {
   );
 }
 
-// ── Especificações de placa (componente.especificacao_motor) ─────────────────
-
-function NameplateSpecs({ componentes }: {
-  componentes: ReturnType<typeof useMachineDetail>["componentes"];
-}) {
-  const esp = componentes[0]?.especificacao_motor;
-  if (!esp) return null;
-
-  const rows: [string, string | number | null | undefined, string][] = [
-    ["Potência",    esp.potencia_kw,      "kW"],
-    ["Tensão",      esp.tensao_nominal,   "V"],
-    ["Corrente",    esp.corrente_nominal, "A"],
-    ["Rotação",     esp.rpm_nominal,      "rpm"],
-    ["Frequência",  esp.frequencia_hz,    "Hz"],
-    ["Nº de polos", esp.numero_polos,     ""],
-    ["Rendimento",  esp.rendimento,       "%"],
-  ];
-  const filled = rows.filter(([, value]) => value !== null && value !== undefined);
-  if (filled.length === 0) return null;
-
-  return (
-    <div>
-      <div style={{ padding: "8px 16px 4px", fontSize: 10, fontWeight: 600, letterSpacing: "0.08em", color: "var(--text3)", textTransform: "uppercase" }}>
-        Placa de identificação
-      </div>
-      {filled.map(([label, value, unit]) => (
-        <SpecRow key={label} label={label} value={unit ? `${value} ${unit}` : String(value)} />
-      ))}
-    </div>
-  );
-}
-
-// ── Especificações por componente ─────────────────────────────────────────────
-
-function ComponenteSpecs({ componentes, valoresPorComponente }: {
-  componentes: ReturnType<typeof useMachineDetail>["componentes"];
-  valoresPorComponente: ReturnType<typeof useMachineDetail>["valoresPorComponente"];
-}) {
-  if (componentes.length === 0) {
-    return <p style={{ color: "var(--text3)", padding: 16, fontSize: 13 }}>Sem componentes cadastrados.</p>;
-  }
-
-  return (
-    <>
-      {componentes.map((comp) => {
-        const valores = valoresPorComponente[comp.id] ?? [];
-        return (
-          <div key={comp.id}>
-            <div style={{ padding: "8px 16px 4px", fontSize: 10, fontWeight: 600, letterSpacing: "0.08em", color: "var(--text3)", textTransform: "uppercase" }}>
-              {comp.nome}
-              {comp.tipo && <span style={{ fontWeight: 400, marginLeft: 6 }}>· {comp.tipo}</span>}
-            </div>
-            {valores.map((v) => {
-              const val = v.valor_string ?? (v.valor_float !== null ? String(v.valor_float) : null) ?? (v.valor_int !== null ? String(v.valor_int) : "—");
-              const label = v.atributo?.nome ?? `Atributo ${v.atributo_id}`;
-              const unit  = v.atributo?.unidade ?? "";
-              return <SpecRow key={v.id} label={label} value={unit ? `${val} ${unit}` : val} />;
-            })}
-          </div>
-        );
-      })}
-    </>
-  );
-}
-
 // ── Tela principal ────────────────────────────────────────────────────────────
-
-const CARD_FILL  = { flex: 1, display: "flex", flexDirection: "column" as const, minHeight: 0 };
-const CARD_AUTO  = { display: "flex", flexDirection: "column" as const, flexShrink: 0 };
-
-type HistTab = "diagnosticos" | "eventos";
 
 export function MachineDetailScreen() {
   const { goTo } = useNavigation();
   const { id }   = useParams<{ id: string }>();
-  const [histTab, setHistTab] = useState<HistTab>("diagnosticos");
+  const [identificacaoOpen, setIdentificacaoOpen] = useState(false);
+  const [especificacoesOpen, setEspecificacoesOpen] = useState(false);
 
   const {
     maquina, componentes, valoresPorComponente,
@@ -177,6 +101,11 @@ export function MachineDetailScreen() {
     leituras, online, prediction,
     componenteId, motorId,
   } = useMachineDetail(id);
+
+  const highlightMap = useMemo(
+    () => buildHighlightMap(prediction, MOTOR_SEGMENT_MAP),
+    [prediction]
+  );
 
   if (loading) return <Spinner />;
   if (error)   return <p style={{ color: "var(--red)", padding: 24 }}>{error}</p>;
@@ -190,101 +119,60 @@ export function MachineDetailScreen() {
         title={maquina.nome}
         sub={maquina.fabricante ?? ""}
         action={<Button onClick={() => goTo("equipment-form", maquina.id)}>Editar</Button>}
+        secondaryActions={
+          <>
+            <Button onClick={() => setIdentificacaoOpen(true)}>Identificação</Button>
+            <Button onClick={() => setEspecificacoesOpen(true)}>Especificações</Button>
+          </>
+        }
         online={online}
         lastLeituraTimestamp={lastLeituraTimestamp}
         prediction={prediction}
         anomalias={anomalias}
+        componenteId={componenteId}
+        motorId={motorId}
       />
 
-      <DashboardGrid>
+      {identificacaoOpen && (
+        <IdentificacaoModal
+          maquina={maquina}
+          open={identificacaoOpen}
+          onClose={() => setIdentificacaoOpen(false)}
+        />
+      )}
 
-        {/* Sidebar — identidade fixa do motor */}
-        <SidebarCol>
-          <Card style={CARD_AUTO}>
-            <CardHeader title="Identificação" />
-            <CardBody>
-              <SpecRow label="ID"          value={String(maquina.id)} />
-              <SpecRow label="Nome"        value={maquina.nome} />
-              <SpecRow label="Tipo"        value={maquina.tipo ?? "—"} />
-              <SpecRow label="Fabricante"  value={maquina.fabricante ?? "—"} />
-              <SpecRow label="Instalação"  value={maquina.ano_instalacao ? String(maquina.ano_instalacao) : "—"} />
-              <SpecRow label="Status"      value={STATUS_LABEL[maquina.status] ?? maquina.status} />
-            </CardBody>
-          </Card>
+      {especificacoesOpen && (
+        <EspecificacoesModal
+          componentes={componentes}
+          valoresPorComponente={valoresPorComponente}
+          open={especificacoesOpen}
+          onClose={() => setEspecificacoesOpen(false)}
+        />
+      )}
 
-          <Card style={{ ...CARD_AUTO }}>
-            <CardHeader title="Modelo 3D" />
-            <SidebarModelBox>
-              <ModelViewerWrapper>
-                <GridOverlay />
-                <Suspense fallback={<ModelFallback />}>
-                  <ModelViewer />
-                </Suspense>
-              </ModelViewerWrapper>
-              <ModelHints>
-                <HintText>↻ Girar</HintText>
-                <ModelTag>{maquina.tipo ?? "modelo"}</ModelTag>
-              </ModelHints>
-            </SidebarModelBox>
-          </Card>
+      <StageGrid>
+        <Card style={CARD_FILL}>
+          <CardHeader title="Modelo 3D" right={<ModelTag>{maquina.tipo ?? "modelo"}</ModelTag>} />
+          <ModelStageBox style={{ flex: 1 }}>
+            <ModelViewerWrapper>
+              <GridOverlay />
+              <Suspense fallback={<ModelFallback />}>
+                <ModelViewer highlightMap={highlightMap} />
+              </Suspense>
+            </ModelViewerWrapper>
+            <ModelHints>
+              <HintText>↻ Girar · passe o mouse sobre uma peça para identificá-la</HintText>
+            </ModelHints>
+          </ModelStageBox>
+        </Card>
 
-          <Card style={CARD_AUTO}>
-            <CardHeader title="Especificações Técnicas" />
-            <div style={{ maxHeight: 260, overflowY: "auto" }}>
-              <NameplateSpecs componentes={componentes} />
-              <ComponenteSpecs componentes={componentes} valoresPorComponente={valoresPorComponente} />
-            </div>
-          </Card>
-        </SidebarCol>
-
-        {/* Coluna central — medições ao vivo */}
-        <MainCol>
-          <Card style={CARD_FILL}>
-            <CardHeader title="Medições" />
+        <Card style={CARD_FILL}>
+          <CardHeader title="Medições" />
+          <MeasurementsBox style={{ flex: 1 }}>
             <SensorCharts leituras={leituras} componenteId={componenteId} />
-          </Card>
-        </MainCol>
-
-        {/* Coluna direita — diagnóstico, tendência e histórico */}
-        <HistoryCol>
-          <Card style={CARD_AUTO}>
-            <CardHeader title="Diagnóstico ML" />
-            {prediction
-              ? <MlDiagnostic prediction={prediction} />
-              : (
-                <div style={{ padding: "24px 16px", textAlign: "center" }}>
-                  <p style={{ fontSize: 12, color: "var(--text3)" }}>Aguardando inferência ML...</p>
-                </div>
-              )
-            }
-          </Card>
-
-          {anomalias.length > 0 && (
-            <Card style={CARD_AUTO}>
-              <CardHeader title="Tendência de Saúde" />
-              <HealthTrend anomalias={anomalias} />
-              <DiagnosticoSummary anomalias={anomalias} />
-            </Card>
-          )}
-
-          <Card style={CARD_FILL}>
-            <TabBar>
-              <TabBtn $active={histTab === "diagnosticos"} onClick={() => setHistTab("diagnosticos")}>
-                Diagnósticos
-              </TabBtn>
-              <TabBtn $active={histTab === "eventos"} onClick={() => setHistTab("eventos")}>
-                Timeline de Eventos
-              </TabBtn>
-            </TabBar>
-            {histTab === "diagnosticos"
-              ? <AnomaliaHistorico anomalias={anomalias} />
-              : <EventTimeline motorId={motorId} anomalias={anomalias} />
-            }
-          </Card>
-        </HistoryCol>
-
-      </DashboardGrid>
-
+          </MeasurementsBox>
+        </Card>
+      </StageGrid>
     </PageWrapper>
   );
 }

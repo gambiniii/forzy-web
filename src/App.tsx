@@ -1,6 +1,7 @@
 import "./styles/globals.css";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ThemeProvider } from "./context/ThemeContext";
+import { ToastProvider } from "./components/ui/Toast/ToastProvider";
 import { AppShell } from "./components/layout/AppShell";
 
 import { LoginScreen }             from "./pages/login";
@@ -23,6 +24,7 @@ import { ReportsScreen }           from "./pages/reports";
 function App() {
   return (
     <ThemeProvider>
+      <ToastProvider>
       <BrowserRouter>
         <AppShell>
           <Routes>
@@ -47,6 +49,7 @@ function App() {
           </Routes>
         </AppShell>
       </BrowserRouter>
+      </ToastProvider>
     </ThemeProvider>
   );
 }

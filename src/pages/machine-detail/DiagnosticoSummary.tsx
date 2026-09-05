@@ -8,9 +8,10 @@ const SEGMENT_COLOR: Record<Anomalia["overall_status"], string> = {
   warning:         "#ffb833",
   critical:        "var(--red)",
   motor_desligado: "var(--text3)",
+  retido:          "var(--text3)",
 };
 
-const ORDER: Anomalia["overall_status"][] = ["healthy", "warning", "critical", "motor_desligado"];
+const ORDER: Anomalia["overall_status"][] = ["healthy", "warning", "critical", "motor_desligado", "retido"];
 
 interface Props {
   anomalias: Anomalia[];
@@ -20,7 +21,7 @@ interface Props {
 export function DiagnosticoSummary({ anomalias }: Props) {
   const total = anomalias.length;
   const counts: Record<Anomalia["overall_status"], number> = {
-    healthy: 0, warning: 0, critical: 0, motor_desligado: 0,
+    healthy: 0, warning: 0, critical: 0, motor_desligado: 0, retido: 0,
   };
   anomalias.forEach((a) => { counts[a.overall_status]++; });
 

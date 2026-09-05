@@ -5,7 +5,7 @@ export interface Anomalia {
   componente_id: number;
   timestamp: string;
   is_anomaly: boolean;
-  overall_status: "healthy" | "warning" | "critical" | "motor_desligado";
+  overall_status: "healthy" | "warning" | "critical" | "motor_desligado" | "retido";
   lstm_severity: string | null;
   risk_level: string | null;
   rul_hours: number | null;
@@ -13,6 +13,10 @@ export interface Anomalia {
   health_score: number | null;
   health_index: number | null;
   recommendation: string | null;
+  confidence: number | null;
+  threshold_status: "nominal" | "atencao" | "critico" | "retido" | null;
+  threshold_message: string | null;
+  breached_metrics: string | null;
 }
 
 /**

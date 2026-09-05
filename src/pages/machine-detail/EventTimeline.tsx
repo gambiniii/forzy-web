@@ -59,6 +59,7 @@ const STATUS_LABELS: Record<string, string> = {
   warning:         "Atenção",
   healthy:         "Normal",
   motor_desligado: "Desligado",
+  retido:          "Retido",
 };
 
 /* ── Helpers ────────────────────────────────────────────────────────── */

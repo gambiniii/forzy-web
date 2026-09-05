@@ -1,8 +1,12 @@
+import { useState } from "react";
 import type { Anomalia } from "../../services/anomalias.service";
 import {
   GaugeWrap, IsoZoneBadge, KpiRow, KpiTile, KpiValue, KpiLabel, RecommendationBox,
 } from "./MachineDetail.styles";
-import { ISO_ZONES, getZone, gaugeColor, healthPct, formatRul } from "./diagnosticoUtils";
+import { ISO_ZONES, getZone, gaugeColor, healthPct, formatRul, THRESHOLD_LABEL } from "./diagnosticoUtils";
+import { HandoffModal } from "./HandoffModal";
+import { useCurrentUser } from "../../hooks/useCurrentUser";
+import { canApproveAction } from "../../utils/roles";
 
 /* ── Gauge semicircular ─────────────────────────────────────────────── */
 
@@ -48,6 +52,43 @@ function Gauge({ value, color }: { value: number; color: string }) {
   );
 }
 
+/* ── Registrar decisão (handoff humano, CS3 §9.4) ─────────────────────── */
+
+function HandoffSection({ prediction }: { prediction: Anomalia }) {
+  const { user } = useCurrentUser();
+  const [open, setOpen] = useState(false);
+  const [registeredAt, setRegisteredAt] = useState<string | null>(null);
+
+  if (!canApproveAction(user?.role)) return null;
+
+  return (
+    <div style={{ padding: "0 12px 12px" }}>
+      {registeredAt ? (
+        <p style={{ fontSize: 11, color: "var(--success)" }}>
+          Decisão registrada por {user?.name} às {new Date(registeredAt).toLocaleTimeString("pt-BR")}.
+        </p>
+      ) : (
+        <button
+          onClick={() => setOpen(true)}
+          style={{
+            width: "100%", padding: "8px 12px", borderRadius: "var(--radius)",
+            border: "1px solid var(--purple)", background: "var(--purple-d)", color: "var(--purple)",
+            fontSize: 12, fontWeight: 600, cursor: "pointer",
+          }}
+        >
+          Registrar decisão / Aprovar ação
+        </button>
+      )}
+      <HandoffModal
+        target={`componente:${prediction.componente_id}`}
+        open={open}
+        onClose={() => setOpen(false)}
+        onSaved={() => setRegisteredAt(new Date().toISOString())}
+      />
+    </div>
+  );
+}
+
 /* ── Component ─────────────────────────────────────────────────────── */
 
 interface Props {
@@ -55,11 +96,46 @@ interface Props {
 }
 
 export function MlDiagnostic({ prediction }: Props) {
-  if (prediction.overall_status === "motor_desligado" || prediction.health_score === null) {
+  const thresholdBadge = prediction.threshold_status ? THRESHOLD_LABEL[prediction.threshold_status] : null;
+  const needsHandoff =
+    prediction.overall_status === "critical" ||
+    prediction.overall_status === "retido" ||
+    prediction.threshold_status === "critico";
+
+  if (prediction.overall_status === "motor_desligado") {
     return (
       <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
         <p style={{ fontSize: 12, color: "var(--text3)", padding: "8px 16px", textAlign: "center" }}>
           Motor desligado — sem leitura de saúde no momento.
+        </p>
+      </div>
+    );
+  }
+
+  if (prediction.overall_status === "retido") {
+    return (
+      <div style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0, overflow: "auto" }}>
+        <div style={{ padding: "24px 16px 8px", textAlign: "center" }}>
+          <IsoZoneBadge $color="var(--text3)">CIRCUIT BREAKER · RETIDO</IsoZoneBadge>
+          <p style={{ fontSize: 12, color: "var(--text2)", marginTop: 12, lineHeight: 1.5 }}>
+            {prediction.recommendation ?? "Diagnóstico retido — aguardando dado confiável."}
+          </p>
+          {prediction.confidence !== null && (
+            <p style={{ fontSize: 11, color: "var(--text3)", marginTop: 8 }}>
+              Confiança do modelo: {prediction.confidence.toFixed(1)}%
+            </p>
+          )}
+        </div>
+        <HandoffSection prediction={prediction} />
+      </div>
+    );
+  }
+
+  if (prediction.health_score === null) {
+    return (
+      <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <p style={{ fontSize: 12, color: "var(--text3)", padding: "8px 16px", textAlign: "center" }}>
+          Sem leitura de saúde no momento.
         </p>
       </div>
     );
@@ -78,6 +154,11 @@ export function MlDiagnostic({ prediction }: Props) {
       <GaugeWrap>
         <Gauge value={pct} color={color} />
         <IsoZoneBadge $color={zoneColor}>{zoneLabel}</IsoZoneBadge>
+        {thresholdBadge && (
+          <div style={{ marginTop: 6, fontSize: 10, fontWeight: 600, color: thresholdBadge.color }}>
+            LIMITE: {thresholdBadge.label}
+          </div>
+        )}
       </GaugeWrap>
 
       <KpiRow>
@@ -97,11 +178,23 @@ export function MlDiagnostic({ prediction }: Props) {
           </KpiValue>
           <KpiLabel>Anomalia</KpiLabel>
         </KpiTile>
+        <KpiTile>
+          <KpiValue>{prediction.confidence !== null ? `${prediction.confidence.toFixed(0)}%` : "—"}</KpiValue>
+          <KpiLabel>Confiança</KpiLabel>
+        </KpiTile>
       </KpiRow>
+
+      {prediction.threshold_message && (
+        <p style={{ fontSize: 11, color: "var(--text3)", padding: "0 12px 8px", lineHeight: 1.4 }}>
+          {prediction.threshold_message}
+        </p>
+      )}
 
       {prediction.recommendation && (
         <RecommendationBox>{prediction.recommendation}</RecommendationBox>
       )}
+
+      {needsHandoff && <HandoffSection prediction={prediction} />}
     </div>
   );
 }

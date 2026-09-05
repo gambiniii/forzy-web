@@ -90,50 +90,36 @@ export const HeroChips = styled.div`
   flex-wrap: wrap;
 `;
 
-/* ── Grid principal: sidebar | medições | diagnóstico e histórico ────── */
+/* ── Stage principal: modelo 3D grande + medições ao vivo ─────────────── */
 
-export const DashboardGrid = styled.div`
+export const StageGrid = styled.div`
   display: grid;
-  grid-template-columns: 300px 1fr 340px;
+  grid-template-columns: 1.4fr 1fr;
   gap: 12px;
   flex: 1;
   min-height: 0;
 
-  @media (max-width: 1200px) {
-    grid-template-columns: 260px 1fr 300px;
+  @media (max-width: 1000px) {
+    grid-template-columns: 1fr;
+    overflow-y: auto;
   }
 `;
 
-export const SidebarCol = styled.div`
+export const ModelStageBox = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  min-height: 0;
-  overflow-y: auto;
+  min-height: 460px;
 `;
 
-export const MainCol = styled.div`
+export const MeasurementsBox = styled.div`
   display: flex;
   flex-direction: column;
-  min-height: 0;
-`;
-
-export const HistoryCol = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  min-height: 0;
-`;
-
-export const SidebarModelBox = styled.div`
-  height: 200px;
-  display: flex;
-  flex-direction: column;
-  flex-shrink: 0;
+  min-height: 460px;
 `;
 
 export const ChartBox = styled.div`
-  height: 130px;
+  flex: 1;
+  min-height: 0;
   position: relative;
 `;
 
@@ -202,16 +188,6 @@ export const ModelTag = styled.span`
   border: 1px solid rgba(0, 229, 160, 0.2);
 `;
 
-/* Especificações — linha 2, coluna 1 */
-export const SpecsCard = styled.div`
-  grid-column: 1;
-  grid-row: 2;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  overflow: hidden;
-`;
-
 export const AlertBanner = styled.div<{ $status: "warning" | "critical" }>`
   padding: 10px 16px;
   border-radius: 6px;
@@ -262,22 +238,13 @@ export const AlertMeta = styled.div`
   font-family: var(--mono);
 `;
 
-/* Gráficos / dashboard — linha 2, coluna 2 */
-export const KpiGrid = styled.div`
-  grid-column: 2;
-  grid-row: 2;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-`;
-
 export const AnomaliaTable = styled.div`
   flex: 1;
   overflow-y: auto;
   min-height: 0;
 `;
 
-type DiagStatus = "healthy" | "warning" | "critical" | "motor_desligado";
+type DiagStatus = "healthy" | "warning" | "critical" | "motor_desligado" | "retido";
 
 function statusColor(s: DiagStatus) {
   if (s === "critical") return "var(--red)";
@@ -363,7 +330,7 @@ export const IsoZoneBadge = styled.div<{ $color: string }>`
 
 export const KpiRow = styled.div`
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 5px;
   padding: 0 12px 10px;
   width: 100%;

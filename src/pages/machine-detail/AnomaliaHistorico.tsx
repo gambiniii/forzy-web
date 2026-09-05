@@ -20,6 +20,7 @@ const STATUS_LABEL: Record<string, string> = {
   warning:         "Atenção",
   healthy:         "Normal",
   motor_desligado: "Desligado",
+  retido:          "Retido",
 };
 
 export function AnomaliaHistorico({ anomalias }: Props) {
