@@ -31,12 +31,14 @@ interface DiagnosisMarker {
 
 interface LoadModelProps {
   onHover?: (name: string | null, x: number, y: number) => void;
+  /** Clique numa peça: fixa o card para o usuário poder interagir com ele. */
+  onSelect?: (name: string, x: number, y: number) => void;
   /** nome do segmento OBJ → destaque de causa-raiz (persiste mesmo sem hover). */
   highlightMap?: Record<string, HighlightInfo>;
   [key: string]: unknown;
 }
 
-export function LoadModel({ onHover, highlightMap, ...props }: LoadModelProps) {
+export function LoadModel({ onHover, onSelect, highlightMap, ...props }: LoadModelProps) {
   const obj = useLoader(OBJLoader, "/3d/Engine1.obj");
   const ref = useRef<THREE.Object3D>(null);
   const { camera } = useThree();
@@ -151,6 +153,13 @@ export function LoadModel({ onHover, highlightMap, ...props }: LoadModelProps) {
     onHover?.(name, e.nativeEvent.clientX, e.nativeEvent.clientY);
   };
 
+  const handleClick = (e: { stopPropagation: () => void; object: THREE.Object3D; nativeEvent: PointerEvent }) => {
+    e.stopPropagation();
+    const mesh = e.object as THREE.Mesh;
+    const name = mesh.name || mesh.parent?.name || "Componente";
+    onSelect?.(name, e.nativeEvent.clientX, e.nativeEvent.clientY);
+  };
+
   return (
     <>
       <primitive
@@ -159,6 +168,7 @@ export function LoadModel({ onHover, highlightMap, ...props }: LoadModelProps) {
         onPointerOver={handlePointerOver}
         onPointerOut={handlePointerOut}
         onPointerMove={handlePointerMove}
+        onClick={handleClick}
         {...props}
       />
       {/* Pin curto ancorado na peça. A explicação completa vive no card HTML fora

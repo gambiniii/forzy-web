@@ -4,6 +4,7 @@ import { StatusPill } from "../../components/ui/StatusPill";
 import { Button } from "../../components/ui/Button";
 import { Counter } from "../../components/ui/Badge/Badge";
 import { BellButton, BellCounterWrap } from "../../components/ui/Toast/Toast.styles";
+import { HeartPulseIcon } from "../../components/ui/icons/HeartPulseIcon";
 import {
   HeroBar, HeroTopRow, HeroTitle, HeroSub, HeroDivider, HeroBody,
   HeroLeft, HeroStatusLine, HeroNarrative, HeroChips,
@@ -56,7 +57,7 @@ export function MachineHero({ title, sub, action, secondaryActions, online, last
             aria-label="Diagnóstico e histórico de alertas"
             onClick={() => { setHistoricoOpen(true); clearUnread(); }}
           >
-            🔔
+            <HeartPulseIcon />
             {unread > 0 && (
               <BellCounterWrap>
                 <Counter count={unread} />

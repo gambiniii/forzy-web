@@ -1,5 +1,6 @@
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import styled from "styled-components";
 import { Canvas } from "@react-three/fiber";
 import { OrbitControls, Environment } from "@react-three/drei";
 import {
@@ -10,13 +11,13 @@ import { useNavigation } from "../../context/NavigationContext";
 import { Spinner } from "../../components/ui/Spinner";
 import { Card, CardHeader } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
-import { LoadModel, type HighlightInfo } from "../../func/load-model.func";
+import { LoadModel } from "../../func/load-model.func";
 import { useMachineDetail } from "./useMachineDetail";
 import { SensorCharts } from "./SensorCharts";
 import { MachineHero } from "./MachineHero";
 import { IdentificacaoModal } from "./IdentificacaoModal";
 import { EspecificacoesModal } from "./EspecificacoesModal";
-import { buildHighlightMap, buildSegmentTooltip, combinarHighlight } from "./diagnosticoUtils";
+import { buildHighlightMap, buildSegmentTooltip, combinarHighlight, type SegmentHighlight } from "./diagnosticoUtils";
 import { SegmentTooltip } from "./SegmentTooltip";
 import { useAtribuicao } from "./useAtribuicao";
 import { MOTOR_SEGMENT_MAP } from "../../config/motorSegmentMap";
@@ -32,12 +33,29 @@ ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Filler, 
 
 const CARD_FILL = { flex: 1, display: "flex", flexDirection: "column" as const, minHeight: 0 };
 
+/** Dica de uso do visualizador, visível só quando nenhum card está aberto. */
+const DicaClique = styled.div`
+  position: absolute;
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 3px 10px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--bg1) 78%, transparent);
+  border: 1px solid var(--border);
+  color: var(--text3);
+  font-size: 10.5px;
+  letter-spacing: 0.02em;
+  pointer-events: none;
+  white-space: nowrap;
+`;
+
 // ── Modelo 3D ────────────────────────────────────────────────────────────────
 
 type Tooltip3D = { segment: string; x: number; y: number } | null;
 
 interface ModelViewerProps {
-  highlightMap: Record<string, HighlightInfo>;
+  highlightMap: Record<string, SegmentHighlight>;
   prediction: Anomalia | null;
   nomeMaquina: string;
   onExplicar: (pergunta: string) => void;
@@ -46,8 +64,14 @@ interface ModelViewerProps {
 
 function ModelViewer({ highlightMap, prediction, nomeMaquina, onExplicar, atribuicao }: ModelViewerProps) {
   const [tooltip, setTooltip] = useState<Tooltip3D>(null);
-  // O card precisa sobreviver ao trajeto do mouse entre a peça e o botão dentro
-  // dele. Sem esse atraso, sair do mesh fecharia o card antes de alcançá-lo.
+  /* Card FIXADO por clique. Enquanto está fixado, o hover não troca nem fecha o
+   * card — é o que permite levar o mouse até o botão do agente sem perdê-lo.
+   * Sai clicando fora, clicando em outra peça ou no X do card. */
+  const [fixado, setFixado] = useState(false);
+  const cardRef = useRef<HTMLDivElement>(null);
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  // Atraso curto ao sair do mesh, para o card sobreviver ao trajeto do mouse
+  // também quando ele NÃO está fixado.
   const fecharTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const cancelarFechamento = () => {
@@ -58,6 +82,7 @@ function ModelViewer({ highlightMap, prediction, nomeMaquina, onExplicar, atribu
   };
 
   const handleHover = (name: string | null, x: number, y: number) => {
+    if (fixado) return;
     if (name) {
       cancelarFechamento();
       setTooltip({ segment: name, x, y });
@@ -67,7 +92,44 @@ function ModelViewer({ highlightMap, prediction, nomeMaquina, onExplicar, atribu
     }
   };
 
+  const handleSelect = (name: string, x: number, y: number) => {
+    cancelarFechamento();
+    setTooltip({ segment: name, x, y });
+    setFixado(true);
+  };
+
+  const fechar = () => {
+    cancelarFechamento();
+    setFixado(false);
+    setTooltip(null);
+  };
+
   useEffect(() => cancelarFechamento, []);
+
+  /* Clique em qualquer lugar fora do card e fora do visualizador fecha o card
+   * fixado. Cliques dentro do canvas que erram o modelo são tratados pelo
+   * `onPointerMissed` do Canvas, que é o mecanismo do react-three-fiber. */
+  useEffect(() => {
+    if (!fixado) return;
+    const aoClicar = (ev: MouseEvent) => {
+      const alvo = ev.target as Node;
+      if (cardRef.current?.contains(alvo)) return;
+      if (wrapperRef.current?.contains(alvo)) return;
+      fechar();
+    };
+    document.addEventListener("mousedown", aoClicar);
+    return () => document.removeEventListener("mousedown", aoClicar);
+  }, [fixado]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  /* Escape fecha, que é o que se espera de qualquer coisa fixada na tela. */
+  useEffect(() => {
+    if (!fixado) return;
+    const aoTeclar = (ev: KeyboardEvent) => {
+      if (ev.key === "Escape") fechar();
+    };
+    document.addEventListener("keydown", aoTeclar);
+    return () => document.removeEventListener("keydown", aoTeclar);
+  }, [fixado]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const tooltipData = useMemo(
     () => (tooltip
@@ -77,31 +139,44 @@ function ModelViewer({ highlightMap, prediction, nomeMaquina, onExplicar, atribu
   );
 
   return (
-    <div style={{ position: "relative", width: "100%", height: "100%" }}>
+    <div ref={wrapperRef} style={{ position: "relative", width: "100%", height: "100%" }}>
       <Canvas
         shadows
         camera={{ position: [0, 0, 1], fov: 50 }}
         style={{ width: "100%", height: "100%", background: "transparent" }}
+        // Clique dentro do canvas que não acerta nenhuma peça solta o card.
+        onPointerMissed={fechar}
       >
         <ambientLight intensity={0.4} />
         <directionalLight position={[5, 5, 5]} intensity={1.2} castShadow />
         <directionalLight position={[-3, 2, -2]} intensity={0.4} color="#38b6ff" />
         <pointLight position={[0, -2, 0]} intensity={0.3} color="#ffa300" />
         <Suspense fallback={null}>
-          <LoadModel position={[0, 0, 0]} onHover={handleHover} highlightMap={highlightMap} />
+          <LoadModel
+            position={[0, 0, 0]}
+            onHover={handleHover}
+            onSelect={handleSelect}
+            highlightMap={highlightMap}
+          />
           <Environment preset="city" />
         </Suspense>
         <OrbitControls enablePan={false} enableZoom autoRotateSpeed={1.2} />
       </Canvas>
       {tooltip && tooltipData && (
         <SegmentTooltip
+          ref={cardRef}
           data={tooltipData}
           x={tooltip.x}
           y={tooltip.y}
+          fixado={fixado}
           onExplicar={onExplicar}
+          onFechar={fechar}
           onMouseEnter={cancelarFechamento}
-          onMouseLeave={() => setTooltip(null)}
+          onMouseLeave={() => { if (!fixado) setTooltip(null); }}
         />
+      )}
+      {!tooltip && (
+        <DicaClique>Passe o mouse nas peças · clique para fixar</DicaClique>
       )}
     </div>
   );

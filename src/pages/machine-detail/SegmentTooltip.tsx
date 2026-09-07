@@ -1,3 +1,4 @@
+import { forwardRef } from "react";
 import styled from "styled-components";
 import type { SegmentTooltipData } from "./diagnosticoUtils";
 
@@ -15,17 +16,24 @@ import type { SegmentTooltipData } from "./diagnosticoUtils";
  *     componentes internos envolvidos e o botão que leva ao agente
  */
 
-const Card = styled.div<{ $severidade?: "atencao" | "critico" }>`
+const Card = styled.div<{ $severidade?: "atencao" | "critico"; $fixado?: boolean }>`
   position: fixed;
   z-index: 9999;
   width: 300px;
+  /* Guarda final: se a estimativa de altura errar, o card rola em vez de vazar
+     para fora da janela. Esconder só o eixo X mantém os cantos arredondados;
+     um overflow hidden nos dois eixos anularia o scroll vertical. */
+  max-height: calc(100vh - 24px);
+  overflow-y: auto;
+  overflow-x: hidden;
   background: var(--bg1);
   border: 1px solid ${(p) =>
     p.$severidade === "critico" ? "var(--red)" :
     p.$severidade === "atencao" ? "var(--amber)" : "var(--border-md)"};
   border-radius: var(--radius);
-  box-shadow: 0 10px 34px rgba(0, 0, 0, 0.45);
-  overflow: hidden;
+  box-shadow: ${(p) => (p.$fixado
+    ? "0 14px 46px rgba(0, 0, 0, 0.6)"
+    : "0 10px 34px rgba(0, 0, 0, 0.45)")};
   font-size: 12px;
   line-height: 1.5;
   color: var(--text1);
@@ -33,10 +41,30 @@ const Card = styled.div<{ $severidade?: "atencao" | "critico" }>`
 
 const Head = styled.div<{ $severidade?: "atencao" | "critico" }>`
   padding: 9px 12px;
+  padding-right: 34px;
   background: ${(p) =>
     p.$severidade === "critico" ? "color-mix(in srgb, var(--red) 16%, var(--bg2))" :
     p.$severidade === "atencao" ? "color-mix(in srgb, var(--amber) 16%, var(--bg2))" : "var(--bg2)"};
   border-bottom: 1px solid var(--border);
+`;
+
+const Fechar = styled.button`
+  position: absolute;
+  top: 7px;
+  right: 8px;
+  width: 20px;
+  height: 20px;
+  display: grid;
+  place-items: center;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text3);
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+
+  &:hover { background: var(--bg3); color: var(--text1); }
 `;
 
 const Titulo = styled.div`
@@ -153,30 +181,49 @@ export interface SegmentTooltipProps {
   data: SegmentTooltipData;
   x: number;
   y: number;
+  /** Fixado por clique: ganha botão de fechar e não fecha ao sair com o mouse. */
+  fixado?: boolean;
   onExplicar: (pergunta: string) => void;
+  onFechar?: () => void;
   onMouseEnter: () => void;
   onMouseLeave: () => void;
 }
 
-export function SegmentTooltip({
-  data, x, y, onExplicar, onMouseEnter, onMouseLeave,
-}: SegmentTooltipProps) {
+export const SegmentTooltip = forwardRef<HTMLDivElement, SegmentTooltipProps>(function SegmentTooltip(
+  { data, x, y, fixado, onExplicar, onFechar, onMouseEnter, onMouseLeave },
+  ref,
+) {
   const sev = data.anomalia?.severidade;
 
   // Mantém o card dentro da janela: se não couber à direita ou abaixo, joga para
-  // o outro lado do cursor.
+  // o outro lado do cursor. A altura é estimada por seção, porque medir exigiria
+  // renderizar antes de posicionar e o card piscaria.
   const LARGURA = 300;
-  const ALTURA_EST = data.anomalia ? 340 : 150;
+  const ALTURA_EST =
+    110 +                                                  // cabeçalho e descrição
+    (data.anomalia ? 90 : 0) +                             // problema
+    (data.anomalia?.causasProvaveis.length ?? 0) * 26 +     // lista de causas
+    (data.componentesInternos.length ? 60 : 0) +           // chips de componentes
+    (data.ml ? 110 : 0) +                                  // bloco do modelo
+    (data.anomalia?.grupoAtribuicao ? 40 : 0) +            // nota de grupo
+    46;                                                    // botão
   const left = x + 16 + LARGURA > window.innerWidth ? Math.max(8, x - LARGURA - 16) : x + 16;
   const top = y + 16 + ALTURA_EST > window.innerHeight ? Math.max(8, y - ALTURA_EST - 8) : y + 16;
 
   return (
     <Card
+      ref={ref}
       $severidade={sev}
+      $fixado={!!fixado}
       style={{ left, top }}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
     >
+      {fixado && (
+        <Fechar type="button" aria-label="Fechar" onClick={onFechar}>
+          ✕
+        </Fechar>
+      )}
       <Head $severidade={sev}>
         <Titulo>{data.titulo}</Titulo>
         <Grupo>{data.grupo}</Grupo>
@@ -249,7 +296,11 @@ export function SegmentTooltip({
         <Acao type="button" onClick={() => onExplicar(data.perguntaAgente)}>
           Explicar com o agente
         </Acao>
+
+        {!fixado && (
+          <Dica>Clique na peça para fixar este card e poder usar o botão.</Dica>
+        )}
       </Body>
     </Card>
   );
-}
+});

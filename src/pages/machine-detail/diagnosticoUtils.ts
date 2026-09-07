@@ -1,4 +1,5 @@
 import type { Anomalia } from "../../services/anomalias.service";
+import type { HighlightInfo } from "../../func/load-model.func";
 import { getPart, GRUPO_LABEL, type ModoDeFalha } from "../../config/motorParts";
 import { GRUPOS_ATRIBUICAO } from "../../config/motorSegmentMap";
 
@@ -59,11 +60,18 @@ export const SEVERITY_3D_COLOR: Record<"atencao" | "critico", { color: string; e
   critico: { color: "#ff4f6a", emissive: "#7a0010" },
 };
 
-export interface SegmentHighlight {
-  color: string;
-  emissive: string;
-  message: string;
-  /** Rótulo curto do pin 3D. */
+/**
+ * Destaque de um segmento, na visão da camada de diagnóstico.
+ *
+ * Estende `HighlightInfo`, que é o que o `LoadModel` precisa para pintar o mesh,
+ * e acrescenta o que só interessa ao diagnóstico. Antes eram duas interfaces
+ * independentes descrevendo o mesmo dado, e a divergência quebrava o build:
+ * `SegmentHighlight` exigia `metricas`, `HighlightInfo` não tinha, e passar um
+ * valor tipado como o segundo para uma função que espera o primeiro era erro de
+ * compilação. Estender torna a relação explícita e impede que voltem a divergir.
+ */
+export interface SegmentHighlight extends HighlightInfo {
+  /** Rótulo curto do pin 3D. Opcional em `HighlightInfo`, obrigatório aqui. */
   pin: string;
   /** Métricas que causaram o destaque deste segmento. */
   metricas: string[];
