@@ -19,6 +19,8 @@ export interface HighlightInfo {
   color: string;
   emissive: string;
   message: string;
+  /** Rótulo curto para o pin 3D (ex: "Temperatura"). Mensagem longa vai no card HTML. */
+  pin?: string;
 }
 
 interface DiagnosisMarker {
@@ -56,6 +58,24 @@ export function LoadModel({ onHover, highlightMap, ...props }: LoadModelProps) {
         roughness: 0.3,
         emissive: info.emissive,
         emissiveIntensity: 0.6,
+      }));
+    });
+    return cache;
+  }, [highlightMap]);
+
+  /* Variante de hover para peças JÁ destacadas por diagnóstico: mantém a cor da
+   * severidade e só intensifica o brilho. Sem isso, o material verde de hover
+   * sobrescreve o vermelho da anomalia justamente quando o operador passa o
+   * mouse para inspecioná-la — apagando o sinal que ele foi ver. */
+  const diagnosisHoverMaterials = useMemo(() => {
+    const cache = new Map<string, THREE.MeshStandardMaterial>();
+    Object.entries(highlightMap ?? {}).forEach(([name, info]) => {
+      cache.set(name, new THREE.MeshStandardMaterial({
+        color: info.color,
+        metalness: 0.4,
+        roughness: 0.2,
+        emissive: info.emissive,
+        emissiveIntensity: 1.15,
       }));
     });
     return cache;
@@ -110,7 +130,9 @@ export function LoadModel({ onHover, highlightMap, ...props }: LoadModelProps) {
   const handlePointerOver = (e: { stopPropagation: () => void; object: THREE.Object3D; nativeEvent: PointerEvent }) => {
     e.stopPropagation();
     const mesh = e.object as THREE.Mesh;
-    mesh.material = MATERIAL_HOVER;
+    // Peça com diagnóstico mantém a cor da severidade (só brilha mais); as demais
+    // recebem o verde padrão de hover.
+    mesh.material = diagnosisHoverMaterials.get(mesh.name) ?? MATERIAL_HOVER;
     document.body.style.cursor = "pointer";
     const name = mesh.name || mesh.parent?.name || "Componente";
     onHover?.(name, e.nativeEvent.clientX, e.nativeEvent.clientY);
@@ -139,25 +161,28 @@ export function LoadModel({ onHover, highlightMap, ...props }: LoadModelProps) {
         onPointerMove={handlePointerMove}
         {...props}
       />
+      {/* Pin curto ancorado na peça. A explicação completa vive no card HTML fora
+        * do Canvas — aqui dentro o texto escalaria com o zoom (distanceFactor) e
+        * seria recortado pela caixa do canvas quando a peça está na borda. */}
       {markers.map((m) => (
-        <Html key={m.name} position={m.position} center distanceFactor={8} zIndexRange={[10, 0]}>
+        <Html key={m.name} position={m.position} center distanceFactor={10} zIndexRange={[10, 0]}>
           <div
             style={{
               background: "rgba(15,23,42,0.94)",
               border: `1px solid ${m.info.color}`,
               color: m.info.color,
-              fontSize: 10,
+              fontSize: 11,
+              fontWeight: 600,
               fontFamily: "var(--mono, monospace)",
-              padding: "4px 8px",
+              padding: "3px 7px",
               borderRadius: 4,
               pointerEvents: "none",
               transform: "translateY(-140%)",
-              maxWidth: 200,
-              lineHeight: 1.4,
-              whiteSpace: "normal",
+              whiteSpace: "nowrap",
+              letterSpacing: "0.02em",
             }}
           >
-            {m.info.message}
+            ⚠ {m.info.pin ?? "Anomalia"}
           </div>
         </Html>
       ))}

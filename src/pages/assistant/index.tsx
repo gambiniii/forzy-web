@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import ReactMarkdown from "react-markdown";
 import { sendChatMessage, type ChatMessage } from "../../services/chat.service";
 import { BASE_URL } from "../../services/api";
@@ -205,6 +206,14 @@ export function AssistantScreen() {
   const bottomRef   = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
+  /* Contexto vindo de outra tela (ex: botão "Explicar com o agente" no modelo 3D).
+   * Chega por `location.state` do react-router. */
+  const location = useLocation();
+  const navigate = useNavigate();
+  const navState = location.state as { prefill?: string; machineId?: string } | null;
+  const prefillEnviado = useRef(false);
+  const machineIdRef = useRef<string>(navState?.machineId ?? "1");
+
   /* scroll to bottom on new messages */
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -260,7 +269,7 @@ export function AssistantScreen() {
     try {
       const res = await sendChatMessage({
         message: msg,
-        machine_id: "1",
+        machine_id: machineIdRef.current,
         session_id: sessionId,
         history,
         mode: "agent",
@@ -280,6 +289,18 @@ export function AssistantScreen() {
       setLoading(false);
     }
   }, [input, loading, history, sessionId]);
+
+  /* Dispara a pergunta que veio de outra tela. Precisa vir DEPOIS de `send`,
+   * que é `const` — um efeito acima dele quebraria por TDZ. Limpamos o state da
+   * rota logo em seguida para a pergunta não ser reenviada ao voltar. */
+  useEffect(() => {
+    const pergunta = navState?.prefill;
+    if (!pergunta || prefillEnviado.current) return;
+    prefillEnviado.current = true;
+    if (navState?.machineId) machineIdRef.current = navState.machineId;
+    navigate(location.pathname, { replace: true, state: null });
+    send(pergunta);
+  }, [navState]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); }

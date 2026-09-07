@@ -1,5 +1,5 @@
-import { Suspense, useMemo, useState } from "react";
-import { useParams } from "react-router-dom";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import { Canvas } from "@react-three/fiber";
 import { OrbitControls, Environment } from "@react-three/drei";
 import {
@@ -16,8 +16,10 @@ import { SensorCharts } from "./SensorCharts";
 import { MachineHero } from "./MachineHero";
 import { IdentificacaoModal } from "./IdentificacaoModal";
 import { EspecificacoesModal } from "./EspecificacoesModal";
-import { buildHighlightMap } from "./diagnosticoUtils";
+import { buildHighlightMap, buildSegmentTooltip } from "./diagnosticoUtils";
+import { SegmentTooltip } from "./SegmentTooltip";
 import { MOTOR_SEGMENT_MAP } from "../../config/motorSegmentMap";
+import type { Anomalia } from "../../services/anomalias.service";
 import {
   PageWrapper, StageGrid, ModelStageBox, MeasurementsBox,
   ModelViewerWrapper, GridOverlay,
@@ -30,14 +32,44 @@ const CARD_FILL = { flex: 1, display: "flex", flexDirection: "column" as const, 
 
 // ── Modelo 3D ────────────────────────────────────────────────────────────────
 
-type Tooltip3D = { name: string; x: number; y: number } | null;
+type Tooltip3D = { segment: string; x: number; y: number } | null;
 
-function ModelViewer({ highlightMap }: { highlightMap: Record<string, HighlightInfo> }) {
+interface ModelViewerProps {
+  highlightMap: Record<string, HighlightInfo>;
+  prediction: Anomalia | null;
+  nomeMaquina: string;
+  onExplicar: (pergunta: string) => void;
+}
+
+function ModelViewer({ highlightMap, prediction, nomeMaquina, onExplicar }: ModelViewerProps) {
   const [tooltip, setTooltip] = useState<Tooltip3D>(null);
+  // O card precisa sobreviver ao trajeto do mouse entre a peça e o botão dentro
+  // dele. Sem esse atraso, sair do mesh fecharia o card antes de alcançá-lo.
+  const fecharTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const cancelarFechamento = () => {
+    if (fecharTimer.current) {
+      clearTimeout(fecharTimer.current);
+      fecharTimer.current = null;
+    }
+  };
 
   const handleHover = (name: string | null, x: number, y: number) => {
-    setTooltip(name ? { name, x, y } : null);
+    if (name) {
+      cancelarFechamento();
+      setTooltip({ segment: name, x, y });
+    } else {
+      cancelarFechamento();
+      fecharTimer.current = setTimeout(() => setTooltip(null), 260);
+    }
   };
+
+  useEffect(() => cancelarFechamento, []);
+
+  const tooltipData = useMemo(
+    () => (tooltip ? buildSegmentTooltip(tooltip.segment, highlightMap[tooltip.segment], prediction, nomeMaquina) : null),
+    [tooltip, highlightMap, prediction, nomeMaquina]
+  );
 
   return (
     <div style={{ position: "relative", width: "100%", height: "100%" }}>
@@ -56,16 +88,15 @@ function ModelViewer({ highlightMap }: { highlightMap: Record<string, HighlightI
         </Suspense>
         <OrbitControls enablePan={false} enableZoom autoRotateSpeed={1.2} />
       </Canvas>
-      {tooltip && (
-        <div style={{
-          position: "fixed", top: tooltip.y + 14, left: tooltip.x + 14,
-          background: "rgba(15,23,42,0.92)", border: "1px solid #22c55e",
-          color: "#22c55e", fontSize: 12, fontFamily: "var(--mono,monospace)",
-          padding: "4px 10px", borderRadius: 4, pointerEvents: "none",
-          zIndex: 9999, whiteSpace: "nowrap",
-        }}>
-          {tooltip.name}
-        </div>
+      {tooltip && tooltipData && (
+        <SegmentTooltip
+          data={tooltipData}
+          x={tooltip.x}
+          y={tooltip.y}
+          onExplicar={onExplicar}
+          onMouseEnter={cancelarFechamento}
+          onMouseLeave={() => setTooltip(null)}
+        />
       )}
     </div>
   );
@@ -91,6 +122,7 @@ function ModelFallback() {
 
 export function MachineDetailScreen() {
   const { goTo } = useNavigation();
+  const navigate = useNavigate();
   const { id }   = useParams<{ id: string }>();
   const [identificacaoOpen, setIdentificacaoOpen] = useState(false);
   const [especificacoesOpen, setEspecificacoesOpen] = useState(false);
@@ -106,6 +138,15 @@ export function MachineDetailScreen() {
     () => buildHighlightMap(prediction, MOTOR_SEGMENT_MAP),
     [prediction]
   );
+
+  /* Leva a pergunta pronta ao assistente. `goTo` do NavigationContext não
+   * repassa `state`, então navegamos direto aqui. O assistente lê o prefill de
+   * `location.state` e já dispara a mensagem. */
+  const explicarComAgente = (pergunta: string) => {
+    navigate("/machinery/assistant", {
+      state: { prefill: pergunta, machineId: componenteId ? String(componenteId) : undefined },
+    });
+  };
 
   if (loading) return <Spinner />;
   if (error)   return <p style={{ color: "var(--red)", padding: 24 }}>{error}</p>;
@@ -157,7 +198,12 @@ export function MachineDetailScreen() {
             <ModelViewerWrapper>
               <GridOverlay />
               <Suspense fallback={<ModelFallback />}>
-                <ModelViewer highlightMap={highlightMap} />
+                <ModelViewer
+                  highlightMap={highlightMap}
+                  prediction={prediction}
+                  nomeMaquina={maquina.nome}
+                  onExplicar={explicarComAgente}
+                />
               </Suspense>
             </ModelViewerWrapper>
             <ModelHints>
