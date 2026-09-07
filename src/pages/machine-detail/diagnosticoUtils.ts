@@ -125,6 +125,68 @@ export function buildHighlightMap(
   return map;
 }
 
+/** Severidade 3D a partir do score normalizado do detector de novidade.
+ * O score é calibrado para que 1,0 seja sempre o ponto de operação. */
+function severidadeML(sev: string | null): "atencao" | "critico" | null {
+  if (sev === "CRITICO" || sev === "ALERTA") return "critico";
+  if (sev === "ATENCAO") return "atencao";
+  return null;
+}
+
+/**
+ * Combina as DUAS fontes de destaque do modelo 3D.
+ *
+ *   1. `breached_metrics` — regra determinística do Metric Contract, auditável,
+ *      comparando a última leitura contra os limites do componente.
+ *   2. Atribuição do detector de novidade — autoencoder treinado só em dado
+ *      saudável, com z-score por feature contra o baseline do regime.
+ *
+ * REGRA DE PRIORIDADE: quando as duas apontam o mesmo segmento, a severidade
+ * mais alta vence e as duas mensagens aparecem. O limite determinístico é o que
+ * o operador consegue auditar, então ele vem primeiro na mensagem; o ML entra
+ * como evidência adicional, nunca sozinho substituindo a regra.
+ */
+export function combinarHighlight(
+  porLimite: Record<string, SegmentHighlight>,
+  atribuicao: {
+    segmentos?: string[];
+    severidade?: string | null;
+    atribuicao?: { titulo?: string; explicacao?: string; atribuido?: boolean } | null;
+  } | null,
+): Record<string, SegmentHighlight> {
+  const sevML = severidadeML(atribuicao?.severidade ?? null);
+  const segs = atribuicao?.segmentos ?? [];
+  if (!sevML || segs.length === 0 || !atribuicao?.atribuicao?.atribuido) return porLimite;
+
+  const { color, emissive } = SEVERITY_3D_COLOR[sevML];
+  const titulo = atribuicao.atribuicao.titulo ?? "Anomalia detectada pelo modelo";
+  const out: Record<string, SegmentHighlight> = { ...porLimite };
+
+  for (const seg of segs) {
+    const anterior = out[seg];
+    if (anterior) {
+      // Já destacado por limite: mantém a cor mais severa e soma a evidência.
+      const critico = anterior.color === SEVERITY_3D_COLOR.critico.color || sevML === "critico";
+      const cor = critico ? SEVERITY_3D_COLOR.critico : SEVERITY_3D_COLOR.atencao;
+      out[seg] = {
+        ...anterior,
+        color: cor.color,
+        emissive: cor.emissive,
+        message: `${anterior.message} O modelo de anomalia também aponta ${titulo.toLowerCase()}.`,
+        metricas: [...anterior.metricas, "modelo"],
+      };
+    } else {
+      out[seg] = {
+        color, emissive,
+        message: `${titulo} detectado pelo modelo de anomalia.`,
+        pin: "Modelo",
+        metricas: ["modelo"],
+      };
+    }
+  }
+  return out;
+}
+
 /* ── Conteúdo do tooltip rico do modelo 3D ────────────────────────────────── */
 
 export interface SegmentTooltipData {
@@ -144,6 +206,15 @@ export interface SegmentTooltipData {
     causasProvaveis: ModoDeFalha[];
     /** Grupo funcional de atribuição ao qual a peça pertence. */
     grupoAtribuicao: string | null;
+  } | null;
+  /** Preenchido quando o detector de novidade atribuiu falha a este segmento. */
+  ml: {
+    titulo: string;
+    explicacao: string;
+    score: number;
+    regime: string;
+    precocidade: string;
+    componentes: string[];
   } | null;
   /** Pergunta pronta para enviar ao agente. */
   perguntaAgente: string;
@@ -169,6 +240,15 @@ export function buildSegmentTooltip(
   highlight: SegmentHighlight | undefined,
   prediction: Anomalia | null,
   nomeMaquina: string,
+  atribuicaoML?: {
+    segmentos?: string[];
+    regime?: string;
+    score_normalizado?: number | null;
+    atribuicao?: {
+      atribuido?: boolean; titulo?: string; explicacao?: string;
+      precocidade?: string; componentes_candidatos?: string[];
+    } | null;
+  } | null,
 ): SegmentTooltipData {
   const part = getPart(segmentId);
   const titulo = part?.label ?? segmentId;
@@ -187,12 +267,40 @@ export function buildSegmentTooltip(
     };
   }
 
-  const perguntaAgente = anomalia
-    ? `No motor ${nomeMaquina}, o diagnóstico apontou ${anomalia.metricas
+  // Evidência do detector de novidade, só se ele atribuiu falha A ESTE segmento.
+  let ml: SegmentTooltipData["ml"] = null;
+  const detalhe = atribuicaoML?.atribuicao;
+  if (detalhe?.atribuido && (atribuicaoML?.segmentos ?? []).includes(segmentId)) {
+    ml = {
+      titulo: detalhe.titulo ?? "Anomalia detectada",
+      explicacao: detalhe.explicacao ?? "",
+      score: Number(atribuicaoML?.score_normalizado ?? 0),
+      regime: atribuicaoML?.regime ?? "—",
+      precocidade: detalhe.precocidade ?? "—",
+      componentes: detalhe.componentes_candidatos ?? [],
+    };
+  }
+
+  const contexto: string[] = [];
+  if (anomalia) {
+    contexto.push(
+      `o diagnóstico apontou ${anomalia.metricas
         .map((m) => (METRIC_LABEL[m] ?? m).toLowerCase())
-        .join(" e ")} fora do limite, e o modelo 3D destacou a peça "${titulo}". ` +
-      `Me explique em detalhe o que pode estar acontecendo nessa peça, quais componentes internos ` +
-      `podem estar envolvidos, como confirmar o diagnóstico na prática e qual a urgência da intervenção.`
+        .join(" e ")} fora do limite`
+    );
+  }
+  if (ml) {
+    contexto.push(
+      `o modelo de anomalia atribuiu "${ml.titulo}" com score ${ml.score.toFixed(2)} ` +
+      `no regime ${ml.regime}`
+    );
+  }
+
+  const perguntaAgente = contexto.length
+    ? `No motor ${nomeMaquina}, ${contexto.join(" e ")}, e o modelo 3D destacou a peça ` +
+      `"${titulo}". Me explique em detalhe o que pode estar acontecendo nessa peça, quais ` +
+      `componentes internos podem estar envolvidos, como confirmar o diagnóstico na prática ` +
+      `e qual a urgência da intervenção.`
     : `Me explique em detalhe a peça "${titulo}" do motor ${nomeMaquina}: qual a função dela, ` +
       `quais modos de falha ela pode apresentar, e como esses modos aparecem nas leituras de ` +
       `velocidade de vibração, aceleração e temperatura que monitoramos.`;
@@ -203,6 +311,7 @@ export function buildSegmentTooltip(
     descricao: part?.descricao ?? "Segmento do modelo 3D ainda não catalogado.",
     componentesInternos: part?.componentesInternos ?? [],
     anomalia,
+    ml,
     perguntaAgente,
   };
 }

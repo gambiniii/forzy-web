@@ -16,10 +16,12 @@ import { SensorCharts } from "./SensorCharts";
 import { MachineHero } from "./MachineHero";
 import { IdentificacaoModal } from "./IdentificacaoModal";
 import { EspecificacoesModal } from "./EspecificacoesModal";
-import { buildHighlightMap, buildSegmentTooltip } from "./diagnosticoUtils";
+import { buildHighlightMap, buildSegmentTooltip, combinarHighlight } from "./diagnosticoUtils";
 import { SegmentTooltip } from "./SegmentTooltip";
+import { useAtribuicao } from "./useAtribuicao";
 import { MOTOR_SEGMENT_MAP } from "../../config/motorSegmentMap";
 import type { Anomalia } from "../../services/anomalias.service";
+import type { Atribuicao } from "../../services/atribuicao.service";
 import {
   PageWrapper, StageGrid, ModelStageBox, MeasurementsBox,
   ModelViewerWrapper, GridOverlay,
@@ -39,9 +41,10 @@ interface ModelViewerProps {
   prediction: Anomalia | null;
   nomeMaquina: string;
   onExplicar: (pergunta: string) => void;
+  atribuicao: Atribuicao | null;
 }
 
-function ModelViewer({ highlightMap, prediction, nomeMaquina, onExplicar }: ModelViewerProps) {
+function ModelViewer({ highlightMap, prediction, nomeMaquina, onExplicar, atribuicao }: ModelViewerProps) {
   const [tooltip, setTooltip] = useState<Tooltip3D>(null);
   // O card precisa sobreviver ao trajeto do mouse entre a peça e o botão dentro
   // dele. Sem esse atraso, sair do mesh fecharia o card antes de alcançá-lo.
@@ -67,8 +70,10 @@ function ModelViewer({ highlightMap, prediction, nomeMaquina, onExplicar }: Mode
   useEffect(() => cancelarFechamento, []);
 
   const tooltipData = useMemo(
-    () => (tooltip ? buildSegmentTooltip(tooltip.segment, highlightMap[tooltip.segment], prediction, nomeMaquina) : null),
-    [tooltip, highlightMap, prediction, nomeMaquina]
+    () => (tooltip
+      ? buildSegmentTooltip(tooltip.segment, highlightMap[tooltip.segment], prediction, nomeMaquina, atribuicao)
+      : null),
+    [tooltip, highlightMap, prediction, nomeMaquina, atribuicao]
   );
 
   return (
@@ -134,9 +139,11 @@ export function MachineDetailScreen() {
     componenteId, motorId,
   } = useMachineDetail(id);
 
+  const { atribuicao } = useAtribuicao(componenteId ?? null);
+
   const highlightMap = useMemo(
-    () => buildHighlightMap(prediction, MOTOR_SEGMENT_MAP),
-    [prediction]
+    () => combinarHighlight(buildHighlightMap(prediction, MOTOR_SEGMENT_MAP), atribuicao),
+    [prediction, atribuicao]
   );
 
   /* Leva a pergunta pronta ao assistente. `goTo` do NavigationContext não
@@ -203,6 +210,7 @@ export function MachineDetailScreen() {
                   prediction={prediction}
                   nomeMaquina={maquina.nome}
                   onExplicar={explicarComAgente}
+                  atribuicao={atribuicao}
                 />
               </Suspense>
             </ModelViewerWrapper>

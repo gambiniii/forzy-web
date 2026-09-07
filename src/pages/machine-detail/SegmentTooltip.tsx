@@ -232,6 +232,20 @@ export function SegmentTooltip({
           </Dica>
         )}
 
+        {data.ml && (
+          <Bloco>
+            <Rotulo>Modelo de anomalia</Rotulo>
+            <Problema $severidade={data.anomalia?.severidade ?? "atencao"}>
+              {data.ml.titulo}
+            </Problema>
+            <Descricao>{data.ml.explicacao}</Descricao>
+            <Dica>
+              Score {data.ml.score} contra ponto de operação 1,0 · regime {data.ml.regime} ·
+              indicador {data.ml.precocidade}
+            </Dica>
+          </Bloco>
+        )}
+
         <Acao type="button" onClick={() => onExplicar(data.perguntaAgente)}>
           Explicar com o agente
         </Acao>
