@@ -11,6 +11,7 @@ export interface LeituraSensor {
   rpm: number | null;
   vibracao: number | null;
   inclinacao: number | null;
+  origem?: "real" | "demo" | null;
   // Campos Forzy IO-Link (novos)
   vibration_velocity_port1?: number | null;
   vibration_velocity_port2?: number | null;

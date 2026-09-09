@@ -235,6 +235,7 @@ export function MachineDetailScreen() {
   if (!maquina) return null;
 
   const lastLeituraTimestamp = leituras[leituras.length - 1]?.timestamp;
+  const lastLeituraOrigem = leituras[leituras.length - 1]?.origem;
 
   return (
     <PageWrapper>
@@ -250,6 +251,7 @@ export function MachineDetailScreen() {
         }
         online={online}
         lastLeituraTimestamp={lastLeituraTimestamp}
+        lastLeituraOrigem={lastLeituraOrigem}
         prediction={prediction}
         anomalias={anomalias}
         componenteId={componenteId}

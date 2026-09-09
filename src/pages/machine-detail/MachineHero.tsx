@@ -2,7 +2,7 @@ import { useState, type ReactNode } from "react";
 import { BackButton } from "../../components/ui/BackButton";
 import { StatusPill } from "../../components/ui/StatusPill";
 import { Button } from "../../components/ui/Button";
-import { Counter } from "../../components/ui/Badge/Badge";
+import { Badge, Counter } from "../../components/ui/Badge/Badge";
 import { BellButton, BellCounterWrap } from "../../components/ui/Toast/Toast.styles";
 import { HeartPulseIcon } from "../../components/ui/icons/HeartPulseIcon";
 import {
@@ -27,13 +27,14 @@ interface Props {
   secondaryActions?: ReactNode;
   online: boolean;
   lastLeituraTimestamp?: string;
+  lastLeituraOrigem?: string | null;
   prediction: Anomalia | null;
   anomalias: Anomalia[];
   componenteId: number;
   motorId: number;
 }
 
-export function MachineHero({ title, sub, action, secondaryActions, online, lastLeituraTimestamp, prediction, anomalias, componenteId, motorId }: Props) {
+export function MachineHero({ title, sub, action, secondaryActions, online, lastLeituraTimestamp, lastLeituraOrigem, prediction, anomalias, componenteId, motorId }: Props) {
   const trend = prediction ? describeTrend(anomalias) : null;
   const { user } = useCurrentUser();
   const [limitesOpen, setLimitesOpen] = useState(false);
@@ -96,6 +97,9 @@ export function MachineHero({ title, sub, action, secondaryActions, online, last
             {online ? "ONLINE" : "OFFLINE"}
           </StatusPill>
           <span>última leitura {formatRelativeTime(lastLeituraTimestamp)}</span>
+          {lastLeituraOrigem === "demo" && (
+            <Badge variant="purple">DADOS DE DEMONSTRAÇÃO</Badge>
+          )}
         </HeroStatusLine>
 
         {!prediction && (
