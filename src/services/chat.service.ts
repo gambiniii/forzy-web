@@ -25,8 +25,40 @@ export interface ChatResponse {
   report_url: string | null;
 }
 
-export function sendChatMessage(req: ChatRequest): Promise<ChatResponse> {
-  return api.post<ChatResponse>("/chat/message", req);
+/**
+ * Envia a mensagem ao agente e traduz a falha em algo acionável.
+ *
+ * Antes, tanto o assistente quanto o mini chat mostravam "erro de conexão" para
+ * QUALQUER falha, o que escondia a causa real: servidor fora do ar, agente ainda
+ * carregando, ou erro dentro do próprio agente. As três exigem ações diferentes.
+ *
+ * O agente pode levar mais de 10 s quando precisa encadear várias tools, e a
+ * primeira mensagem depois de um reinício ainda paga o carregamento do
+ * vectorstore. Por isso o limite aqui é generoso.
+ */
+const TIMEOUT_MS = 120_000;
+
+export async function sendChatMessage(req: ChatRequest): Promise<ChatResponse> {
+  const abort = new AbortController();
+  const t = setTimeout(() => abort.abort(), TIMEOUT_MS);
+  try {
+    return await api.post<ChatResponse>("/chat/message", req, { signal: abort.signal });
+  } catch (e) {
+    const err = e as { name?: string; message?: string };
+    if (err?.name === "AbortError") {
+      throw new Error(
+        `O agente não respondeu em ${TIMEOUT_MS / 1000}s. Ele pode estar carregando ` +
+        "os modelos — tente de novo em alguns segundos."
+      );
+    }
+    // TypeError de fetch significa que a requisição nem chegou ao servidor.
+    if (err?.name === "TypeError") {
+      throw new Error("Não foi possível alcançar a API. Verifique se o servidor está no ar.");
+    }
+    throw e;
+  } finally {
+    clearTimeout(t);
+  }
 }
 
 export function clearChatSession(sessionId: string): Promise<void> {

@@ -153,8 +153,8 @@ export function MiniChat({ x, y, visible, onMove, onClose, onExpand }: Props) {
       const answer = res.answer || "Sem resposta disponível.";
       setMessages(prev => [...prev, { role: "ai", text: answer }]);
       setHistory([...newHistory, { role: "assistant", content: answer }]);
-    } catch {
-      setMessages(prev => [...prev, { role: "ai", text: "Erro ao conectar com a API." }]);
+    } catch (e) {
+      setMessages(prev => [...prev, { role: "ai", text: (e as Error)?.message ?? "Erro ao falar com o agente." }]);
     } finally {
       setLoading(false);
     }

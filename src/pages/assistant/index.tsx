@@ -280,10 +280,10 @@ export function AssistantScreen() {
 
       setMessages((prev) => [...prev, { role: "ai", text: answer, reportUrl }]);
       setHistory([...newHistory, { role: "assistant", content: answer }]);
-    } catch {
+    } catch (e) {
       setMessages((prev) => [
         ...prev,
-        { role: "ai", text: "Não consegui processar sua pergunta. Verifique a conexão com a API e tente novamente." },
+        { role: "ai", text: (e as Error)?.message ?? "Não consegui processar sua pergunta. Tente novamente." },
       ]);
     } finally {
       setLoading(false);
