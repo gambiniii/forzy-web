@@ -115,9 +115,19 @@ export function LoadModel({ onHover, onSelect, highlightMap, ...props }: LoadMod
     const fov = (camera as THREE.PerspectiveCamera).fov * (Math.PI / 180);
     const distance = (maxDim / 2 / Math.tan(fov / 2)) * 1.8;
 
-    camera.position.set(0, 0, distance);
+    // Vista 3/4 por padrão (mostra o topo com o olhal de içamento + a lateral
+    // do eixo), em vez de uma vista frontal reta — ângulos escolhidos à mão.
+    const azimuth = Math.PI / 5;   // ~36° ao redor do eixo vertical
+    const elevation = Math.PI / 8; // ~22,5° acima da horizontal
+    const camDistance = distance * 0.72; // mais perto que o enquadramento "cabe tudo" padrão
+    camera.position.set(
+      camDistance * Math.sin(azimuth) * Math.cos(elevation),
+      camDistance * Math.sin(elevation),
+      camDistance * Math.cos(azimuth) * Math.cos(elevation),
+    );
     camera.near = distance / 100;
     camera.far = distance * 10;
+    camera.lookAt(0, 0, 0);
     camera.updateProjectionMatrix();
 
     applyMaterials();

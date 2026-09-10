@@ -11,6 +11,10 @@ export const PlantsGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 18px;
+  /* sem isso, o grid estica todo card da mesma linha pra bater com o mais
+   * alto — abrir o accordion de um card fazia os vizinhos "crescerem" junto,
+   * mesmo fechados. */
+  align-items: start;
 `;
 
 export const PlantCard = styled.div`
@@ -187,7 +191,32 @@ export const PlantLastReading = styled.div`
   white-space: nowrap;
 `;
 
-/* ── Motors list ────────────────────────────────────────────────────── */
+/* ── Motors list (accordion) ──────────────────────────────────────────── */
+
+export const MotorsToggle = styled.button`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  margin-top: 12px;
+  padding-top: 10px;
+  border: none;
+  border-top: 1px solid var(--border);
+  background: none;
+  cursor: pointer;
+  font-family: inherit;
+  color: var(--text2);
+  font-size: 11px;
+  font-weight: 600;
+
+  &:hover { color: var(--text1); }
+`;
+
+export const MotorsToggleChevron = styled.svg<{ $open: boolean }>`
+  transition: transform 0.15s ease;
+  transform: rotate(${({ $open }) => ($open ? 180 : 0)}deg);
+  flex-shrink: 0;
+`;
 
 export const MotorsList = styled.div`
   margin-top: 10px;

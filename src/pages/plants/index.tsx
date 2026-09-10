@@ -13,6 +13,7 @@ import {
   PlantName, HeaderBadge, PlantBody, PlantLocation,
   PlantKpiRow, PlantKpi, PlantKpiValue, PlantKpiLabel,
   PlantInfoStrip, PlantIsoBadge, PlantLastReading,
+  MotorsToggle, MotorsToggleChevron,
   MotorsList, MotorRow, MotorDot, MotorName, MotorHealthBar, MotorHealthPct,
 } from "./Plants.styles";
 
@@ -61,6 +62,7 @@ function machinesColor(motors: MotorSummary[]): string {
 
 function PlantCardContent({ planta, onClick }: { planta: Planta; onClick: () => void }) {
   const { stats, loading } = usePlantStats(planta.id);
+  const [motorsOpen, setMotorsOpen] = useState(false);
 
   const location = [planta.cidade, planta.estado].filter(Boolean).join(", ")
     || planta.localizacao || "—";
@@ -135,24 +137,37 @@ function PlantCardContent({ planta, onClick }: { planta: Planta; onClick: () => 
           </PlantInfoStrip>
         )}
 
-        {/* Motors list */}
+        {/* Motors list — accordion, fechado por padrão pra não poluir o card */}
         {!loading && (stats?.motors.length ?? 0) > 0 && (
-          <MotorsList>
-            {stats!.motors.map((m) => (
-              <MotorRow key={m.id}>
-                <MotorDot $status={m.status} />
-                <MotorName title={m.nome}>{m.nome}{m.tipo ? ` · ${m.tipo}` : ""}</MotorName>
-                {m.health !== null && (
-                  <>
-                    <MotorHealthBar $pct={m.health} $color={healthColor(m.health)} />
-                    <MotorHealthPct $color={healthColor(m.health)}>
-                      {m.health.toFixed(0)}%
-                    </MotorHealthPct>
-                  </>
-                )}
-              </MotorRow>
-            ))}
-          </MotorsList>
+          <>
+            <MotorsToggle
+              type="button"
+              onClick={(e) => { e.stopPropagation(); setMotorsOpen((v) => !v); }}
+            >
+              <span>Máquinas ({stats!.motors.length})</span>
+              <MotorsToggleChevron $open={motorsOpen} width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M6 9l6 6 6-6" />
+              </MotorsToggleChevron>
+            </MotorsToggle>
+            {motorsOpen && (
+              <MotorsList>
+                {stats!.motors.map((m) => (
+                  <MotorRow key={m.id}>
+                    <MotorDot $status={m.status} />
+                    <MotorName title={m.nome}>{m.nome}{m.tipo ? ` · ${m.tipo}` : ""}</MotorName>
+                    {m.health !== null && (
+                      <>
+                        <MotorHealthBar $pct={m.health} $color={healthColor(m.health)} />
+                        <MotorHealthPct $color={healthColor(m.health)}>
+                          {m.health.toFixed(0)}%
+                        </MotorHealthPct>
+                      </>
+                    )}
+                  </MotorRow>
+                ))}
+              </MotorsList>
+            )}
+          </>
         )}
       </PlantBody>
     </PlantCard>

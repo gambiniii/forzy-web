@@ -7,12 +7,11 @@ import { BellButton, BellCounterWrap } from "../../components/ui/Toast/Toast.sty
 import { HeartPulseIcon } from "../../components/ui/icons/HeartPulseIcon";
 import {
   HeroBar, HeroTopRow, HeroTitle, HeroSub, HeroDivider, HeroBody,
-  HeroLeft, HeroStatusLine, HeroNarrative, HeroChips,
+  HeroLeft, HeroStatusLine, HeroChips,
   KpiTile, KpiValue, KpiLabel,
-  AlertBanner, AlertIcon, AlertBody, AlertTitle, AlertText, AlertMeta,
 } from "./MachineDetail.styles";
-import { ISO_ZONES, getZone, healthPct, formatRul, STATUS_LABEL, THRESHOLD_LABEL } from "./diagnosticoUtils";
-import { describeTrend, formatRelativeTime } from "./narrative";
+import { ISO_ZONES, getZone, THRESHOLD_LABEL } from "./diagnosticoUtils";
+import { formatRelativeTime } from "./narrative";
 import { LimitesModal } from "./LimitesModal";
 import { DiagnosticoHistoricoModal } from "./DiagnosticoHistoricoModal";
 import { useAnomalyToasts } from "./useAnomalyToasts";
@@ -35,7 +34,6 @@ interface Props {
 }
 
 export function MachineHero({ title, sub, action, secondaryActions, online, lastLeituraTimestamp, lastLeituraOrigem, prediction, anomalias, componenteId, motorId }: Props) {
-  const trend = prediction ? describeTrend(anomalias) : null;
   const { user } = useCurrentUser();
   const [limitesOpen, setLimitesOpen] = useState(false);
   const [historicoOpen, setHistoricoOpen] = useState(false);
@@ -97,44 +95,10 @@ export function MachineHero({ title, sub, action, secondaryActions, online, last
             {online ? "ONLINE" : "OFFLINE"}
           </StatusPill>
           <span>última leitura {formatRelativeTime(lastLeituraTimestamp)}</span>
-          {lastLeituraOrigem === "demo" && (
+          {/* {lastLeituraOrigem === "demo" && (
             <Badge variant="purple">DADOS DE DEMONSTRAÇÃO</Badge>
-          )}
+          )} */}
         </HeroStatusLine>
-
-        {!prediction && (
-          <HeroNarrative>Aguardando o primeiro diagnóstico deste motor.</HeroNarrative>
-        )}
-
-        {prediction && prediction.overall_status === "motor_desligado" && (
-          <HeroNarrative>Motor desligado no momento — sem leitura de vibração ativa.</HeroNarrative>
-        )}
-
-        {prediction && prediction.overall_status === "retido" && (
-          <HeroNarrative>
-            {prediction.recommendation ?? "Diagnóstico retido pelo circuit breaker — aguardando dado confiável."}
-          </HeroNarrative>
-        )}
-
-        {prediction && prediction.overall_status !== "motor_desligado" && prediction.overall_status !== "retido" && (
-          prediction.is_anomaly ? (
-            <AlertBanner $status={prediction.overall_status === "critical" ? "critical" : "warning"}>
-              <AlertIcon $status={prediction.overall_status === "critical" ? "critical" : "warning"}>⚠</AlertIcon>
-              <AlertBody>
-                <AlertTitle $status={prediction.overall_status === "critical" ? "critical" : "warning"}>
-                  {STATUS_LABEL[prediction.overall_status]}
-                </AlertTitle>
-                <AlertText>{prediction.recommendation ?? "Anomalia detectada na análise de vibração."}</AlertText>
-                {trend && <AlertMeta>{trend}</AlertMeta>}
-              </AlertBody>
-            </AlertBanner>
-          ) : (
-            <HeroNarrative>
-              {prediction.recommendation ?? "Motor operando normalmente."}
-              {trend && <> {trend}</>}
-            </HeroNarrative>
-          )
-        )}
       </HeroLeft>
 
       {prediction && (thresholdBadge || prediction.overall_status !== "motor_desligado") && (
@@ -146,24 +110,10 @@ export function MachineHero({ title, sub, action, secondaryActions, online, last
             </KpiTile>
           )}
           {prediction.overall_status !== "motor_desligado" && prediction.overall_status !== "retido" && (
-            <>
-              <KpiTile>
-                <KpiValue>{healthPct(prediction.health_score)?.toFixed(0) ?? "—"}%</KpiValue>
-                <KpiLabel>Saúde</KpiLabel>
-              </KpiTile>
-              <KpiTile>
-                <KpiValue>{formatRul(prediction.rul_hours)}</KpiValue>
-                <KpiLabel>RUL Est.</KpiLabel>
-              </KpiTile>
-              <KpiTile>
-                <KpiValue>{prediction.maintenance_window_days !== null ? `${prediction.maintenance_window_days}d` : "—"}</KpiValue>
-                <KpiLabel>Manutenção</KpiLabel>
-              </KpiTile>
-              <KpiTile>
-                <KpiValue $color={ISO_ZONES[getZone(prediction)].color}>{getZone(prediction)}</KpiValue>
-                <KpiLabel>Zona ISO</KpiLabel>
-              </KpiTile>
-            </>
+            <KpiTile>
+              <KpiValue $color={ISO_ZONES[getZone(prediction)].color}>{getZone(prediction)}</KpiValue>
+              <KpiLabel>Zona ISO</KpiLabel>
+            </KpiTile>
           )}
         </HeroChips>
       )}
